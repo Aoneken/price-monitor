@@ -1,0 +1,101 @@
+{
+  "Booking": {
+    "precio": [
+      "[data-testid='price-and-discounted-price']",
+      "[data-testid='price-label']",
+      ".priceDisplay",
+      "span[aria-label*='price' i]",
+      ".bui-price-display__value"
+    ],
+    "no_disponible": [
+      "[data-testid='calendar-unavailable']",
+      "text=/no disponible/i",
+      "text=/not available/i",
+      ".not-available-message",
+      "[data-testid='soldout']"
+    ],
+    "captcha": [
+      "text=/verifica que eres humano/i",
+      "text=/confirm you're human/i",
+      ".captcha-container",
+      "#challenge-running"
+    ],
+    "limpieza_incluida": [
+      "text=/limpieza incluida/i",
+      "text=/cleaning included/i"
+    ],
+    "impuestos_incluidos": [
+      "text=/incluye impuestos/i",
+      "text=/taxes included/i",
+      "text=/tasas incluidas/i"
+    ],
+    "desayuno_incluido": [
+      "text=/desayuno incluido/i",
+      "text=/breakfast included/i"
+    ]
+  },
+  "Airbnb": {
+    "precio": [
+      "span._tyxjp1",
+      "span._1jo4hgw",
+      "div[data-testid='price-breakdown'] span",
+      "._14y1gc",
+      "span[class*='_price']"
+    ],
+    "no_disponible": [
+      "text=/no está disponible para estas fechas/i",
+      "text=/not available for these dates/i",
+      "._1r4u6z8",
+      ".unavailable-message",
+      "[data-testid='unavailable']"
+    ],
+    "captcha": [
+      "text=/confirma que no eres un robot/i",
+      "text=/confirm you're not a robot/i",
+      "#recaptcha",
+      ".challenge-form",
+      "[data-testid='captcha']"
+    ],
+    "limpieza_incluida": [
+      "text=/tarifa de limpieza/i",
+      "text=/cleaning fee/i"
+    ],
+    "impuestos_incluidos": [
+      "text=/tarifa de servicio/i",
+      "text=/service fee/i",
+      "text=/taxes/i"
+    ],
+    "desayuno_incluido": [
+      "text=/desayuno/i",
+      "text=/breakfast/i"
+    ]
+  },
+  "Vrbo": {
+    "precio": [
+      "[data-testid='price-summary-total']",
+      ".price-lockup__price",
+      "span[class*='Price']"
+    ],
+    "no_disponible": [
+      "text=/no disponible/i",
+      "text=/not available/i",
+      ".unavailable"
+    ],
+    "captcha": [
+      "text=/captcha/i",
+      "#challenge-form"
+    ],
+    "limpieza_incluida": [
+      "text=/limpieza/i",
+      "text=/cleaning/i"
+    ],
+    "impuestos_incluidos": [
+      "text=/impuestos/i",
+      "text=/taxes/i"
+    ],
+    "desayuno_incluido": [
+      "text=/desayuno/i",
+      "text=/breakfast/i"
+    ]
+  }
+}
