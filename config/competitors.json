@@ -1,0 +1,25 @@
+{
+  "properties": [
+    {
+      "name": "Aizeder Eco Container House",
+      "platforms": {
+        "airbnb": "https://www.airbnb.com.ar/rooms/928978094650118177",
+        "booking": "https://www.booking.com/hotel/ar/aizeder-eco-container-house.es.html"
+      }
+    },
+    {
+      "name": "Cerro Eléctrico",
+      "platforms": {
+        "airbnb": "https://www.airbnb.com.ar/rooms/39250879",
+        "booking": "https://www.booking.com/hotel/ar/cerro-electrico.es.html"
+      }
+    },
+    {
+      "name": "Viento de Glaciares",
+      "platforms": {
+        "airbnb": "https://www.airbnb.com.ar/rooms/1413234233737891700",
+        "booking": "https://www.booking.com/hotel/ar/viento-de-glaciares.es.html"
+      }
+    }
+  ]
+}
