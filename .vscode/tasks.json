@@ -1,0 +1,86 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Start Price Monitor",
+            "type": "shell",
+            "command": "streamlit run app.py",
+            "isBackground": true,
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "^(.*)$",
+                    "file": 1,
+                    "location": 2,
+                    "message": 3
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^Collecting usage statistics",
+                    "endsPattern": "You can now view your Streamlit app"
+                }
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": false
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "runOptions": {
+                "instanceLimit": 1
+            }
+        },
+        {
+            "label": "Stop Price Monitor",
+            "type": "shell",
+            "command": "pkill -f 'streamlit run app.py'",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Restart Price Monitor",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Stop Price Monitor",
+                "Start Price Monitor"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Run E2E Tests",
+            "type": "shell",
+            "command": "python3 tests/test_e2e.py",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Run Platform Tests",
+            "type": "shell",
+            "command": "timeout 180 python3 tests/test_scraping_plataformas.py",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "View Streamlit Logs",
+            "type": "shell",
+            "command": "tail -f logs/streamlit.log",
+            "isBackground": true,
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            }
+        }
+    ]
+}

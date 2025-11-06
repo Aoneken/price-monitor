@@ -27,7 +27,7 @@ ENV/
 .venv
 
 # IDE
-.vscode/
+# .vscode/  # Comentado para permitir compartir configuración de tasks
 .idea/
 *.swp
 *.swo
