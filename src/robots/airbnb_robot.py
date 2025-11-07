@@ -68,6 +68,12 @@ class AirbnbRobotV3(BaseRobot):
     ) -> None:
         """
         Navega a Airbnb con fechas seleccionadas.
+        
+        Estrategia anti-timeout:
+        1. Navegar con wait_until='domcontentloaded' (más rápido que 'networkidle')
+        2. Aumentar timeout a 60s (Airbnb es lento)
+        3. Esperar múltiples selectores alternativos
+        4. Si falla selector, continuar igual (el parser buscará en JSON)
         """
         # Construir URL con fechas
         base_url = url.split('?')[0]
@@ -76,13 +82,40 @@ class AirbnbRobotV3(BaseRobot):
         
         full_url = f"{base_url}?check_in={check_in_str}&check_out={check_out_str}&adults=1"
         
-        # Navegar
-        self.page.goto(full_url, wait_until='networkidle', timeout=30000)
+        # Navegar con timeout más largo y wait más permisivo
+        try:
+            self.page.goto(full_url, wait_until='domcontentloaded', timeout=60000)
+        except Exception as e:
+            # Si falla goto, intentar con load básico
+            if 'timeout' in str(e).lower():
+                self.page.goto(full_url, wait_until='load', timeout=60000)
+            else:
+                raise
         
-        # Esperar panel de precios
-        self.page.wait_for_selector('[data-testid*="price-item"]', timeout=10000)
+        # Intentar esperar panel de precios con múltiples selectores
+        # Si ninguno funciona, continuar igual (parser buscará en JSON)
+        selectors = [
+            '[data-testid*="price-item"]',
+            '[data-testid="book-it-default"]',
+            '[data-section-id="BOOK_IT_SIDEBAR"]',
+            '.priceBreakdownModal',
+            '._1lds9wb'  # Selector de reserva
+        ]
         
-        time.sleep(1)  # Estabilización
+        waited = False
+        for selector in selectors:
+            try:
+                self.page.wait_for_selector(selector, timeout=5000)
+                waited = True
+                break
+            except:
+                continue
+        
+        # Dar tiempo adicional si no encontró nada
+        if not waited:
+            time.sleep(3)
+        else:
+            time.sleep(1)
     
     def _extract_html(self) -> str:
         """

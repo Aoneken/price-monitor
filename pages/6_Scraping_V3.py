@@ -281,13 +281,30 @@ if st.session_state.scraping_in_progress:
             # Ejecutar scraping
             result = scheduler.scrape_url(url_data, check_in, check_out)
             
+            # Formatear mensaje de error de forma más legible
+            if result['status'] != 'success':
+                error_msg = result.get('error', 'Error desconocido')
+                # Acortar mensajes de timeout de Playwright
+                if 'Timeout' in error_msg and 'Page.goto' in error_msg:
+                    error_msg = f"Timeout de navegación ({url_data['plataforma']})"
+                elif 'Timeout' in error_msg and 'wait_for_selector' in error_msg:
+                    error_msg = f"Timeout esperando precio ({url_data['plataforma']})"
+                elif 'Target page, context or browser has been closed' in error_msg:
+                    error_msg = "Navegador cerrado inesperadamente"
+                elif len(error_msg) > 100:
+                    # Acortar mensajes muy largos
+                    error_msg = error_msg[:97] + "..."
+                mensaje = error_msg
+            else:
+                mensaje = f"{result.get('nights_saved', 0)} precios guardados"
+            
             # Guardar resultado
             st.session_state.scraping_results.append({
                 'Establecimiento': estab_name,
                 'Plataforma': url_data['plataforma'],
                 'Estado': '✅ OK' if result['status'] == 'success' else '❌ Error',
                 'Noches': result.get('nights_saved', 0),
-                'Mensaje': result.get('error', 'Éxito') if result['status'] != 'success' else f"{result.get('nights_saved', 0)} precios guardados"
+                'Mensaje': mensaje
             })
             
             if result['status'] == 'success':
