@@ -69,7 +69,7 @@ st.sidebar.markdown(f"**Noches:** {nights}")
 col1, col2 = st.columns([2, 1])
 
 with col1:
-    st.header("📋 URLs Disponibles")
+    st.header("📋 Filtros de Scraping")
     
     # Inicializar adapter
     try:
@@ -82,38 +82,118 @@ with col1:
             st.warning("No hay URLs activas en la base de datos.")
             st.stop()
         
-        # Agrupar por plataforma
+        # Agrupar por plataforma y establecimiento
         platforms = {}
+        establecimientos = {}
+        
         for url_data in all_urls:
             platform = url_data['plataforma']
+            estab_id = url_data['id_establecimiento']
+            
             if platform not in platforms:
                 platforms[platform] = []
             platforms[platform].append(url_data)
+            
+            if estab_id not in establecimientos:
+                # Obtener nombre del establecimiento de la BD
+                establecimientos[estab_id] = {
+                    'urls': [],
+                    'nombre': f"Establecimiento #{estab_id}"  # Placeholder
+                }
+            establecimientos[estab_id]['urls'].append(url_data)
         
-        # Mostrar contadores
-        for platform, urls in platforms.items():
-            st.metric(platform, len(urls))
+        # --- FILTROS PERSONALIZADOS ---
+        st.subheader("🔍 Selecciona qué scrapear")
         
-        st.markdown(f"**Total URLs activas:** {len(all_urls)}")
+        # Filtro 1: Por Plataforma
+        filter_platforms = st.multiselect(
+            "Plataformas",
+            options=list(platforms.keys()),
+            default=list(platforms.keys()),
+            help="Selecciona una o más plataformas"
+        )
+        
+        # Filtro 2: Por Establecimiento (IDs)
+        filter_establishments = st.multiselect(
+            "Establecimientos (ID)",
+            options=list(establecimientos.keys()),
+            default=list(establecimientos.keys()),
+            help="Selecciona uno o más establecimientos por ID"
+        )
+        
+        # Filtro 3: Por URL específica
+        url_options = {
+            f"{u['plataforma']} - ID:{u['id_plataforma_url']} - {u['url'][:50]}...": u['id_plataforma_url']
+            for u in all_urls
+        }
+        
+        filter_urls = st.multiselect(
+            "URLs específicas (opcional)",
+            options=list(url_options.keys()),
+            default=[],
+            help="Deja vacío para usar filtros de plataforma/establecimiento"
+        )
+        
+        # Aplicar filtros
+        if filter_urls:
+            # Si hay URLs específicas, usar solo esas
+            selected_url_ids = [url_options[key] for key in filter_urls]
+            urls_filtered = [u for u in all_urls if u['id_plataforma_url'] in selected_url_ids]
+        else:
+            # Filtrar por plataforma + establecimiento
+            urls_filtered = [
+                u for u in all_urls
+                if u['plataforma'] in filter_platforms
+                and u['id_establecimiento'] in filter_establishments
+            ]
         
         # URLs en caché
         recent = adapter.get_recent_scrapes(cache_hours)
-        st.markdown(f"**URLs en caché ({cache_hours}h):** {len(recent)}")
         
-        urls_to_scrape = [u for u in all_urls if u['id_plataforma_url'] not in recent]
-        st.markdown(f"**URLs pendientes:** {len(urls_to_scrape)}")
+        # URLs pendientes (aplicando filtros)
+        urls_to_scrape = [
+            u for u in urls_filtered 
+            if u['id_plataforma_url'] not in recent
+        ]
+        
+        st.markdown("---")
+        
+        # Resumen de filtros
+        col_a, col_b, col_c = st.columns(3)
+        
+        with col_a:
+            st.metric("📊 Total URLs", len(all_urls))
+        with col_b:
+            st.metric("🎯 Filtradas", len(urls_filtered))
+        with col_c:
+            st.metric("⏳ Pendientes", len(urls_to_scrape))
+        
+        # Detalle por plataforma (filtrado)
+        st.markdown("**Distribución por plataforma (filtradas):**")
+        filtered_platforms = {}
+        for url_data in urls_filtered:
+            platform = url_data['plataforma']
+            if platform not in filtered_platforms:
+                filtered_platforms[platform] = 0
+            filtered_platforms[platform] += 1
+        
+        cols = st.columns(len(filtered_platforms) if filtered_platforms else 1)
+        for idx, (platform, count) in enumerate(filtered_platforms.items()):
+            with cols[idx]:
+                in_cache = len([u for u in urls_filtered if u['plataforma'] == platform and u['id_plataforma_url'] in recent])
+                st.metric(platform, f"{count} ({count - in_cache} pend.)")
         
     except Exception as e:
         st.error(f"Error conectando a la base de datos: {e}")
         st.stop()
 
 with col2:
-    st.header("🎯 Acciones")
+    st.header("🎯 Acciones de Scraping")
     
-    # Botón para scrapear todo
-    if st.button("🚀 Scrapear Todo", type="primary", use_container_width=True):
+    # Botón para scrapear selección
+    if st.button("🚀 Scrapear Selección", type="primary", use_container_width=True):
         if len(urls_to_scrape) == 0:
-            st.warning("No hay URLs pendientes (todas en caché)")
+            st.warning("No hay URLs pendientes en la selección")
         else:
             with st.spinner(f"Scraping {len(urls_to_scrape)} URLs..."):
                 try:
@@ -122,75 +202,115 @@ with col2:
                         headless=headless
                     )
                     
-                    # Ejecutar scraping
-                    stats = scheduler.scrape_all(
-                        days_ahead=days_ahead,
-                        nights=nights
-                    )
+                    # Scrapear solo las URLs filtradas
+                    results = []
+                    success_count = 0
+                    error_count = 0
+                    
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
+                    
+                    for idx, url_data in enumerate(urls_to_scrape):
+                        status_text.text(f"Scraping {url_data['plataforma']} (URL {url_data['id_plataforma_url']})...")
+                        
+                        result = scheduler.scrape_url(url_data, check_in, check_out)
+                        results.append(result)
+                        
+                        if result['status'] == 'success':
+                            success_count += 1
+                        else:
+                            error_count += 1
+                        
+                        progress_bar.progress((idx + 1) / len(urls_to_scrape))
+                    
+                    status_text.empty()
+                    progress_bar.empty()
                     
                     # Mostrar resultados
                     st.success(f"✓ Scraping completado!")
                     
                     col_a, col_b, col_c = st.columns(3)
                     with col_a:
-                        st.metric("Procesadas", stats['total_urls'])
+                        st.metric("Procesadas", len(urls_to_scrape))
                     with col_b:
-                        st.metric("Éxitos", stats['success'])
+                        st.metric("✓ Éxitos", success_count)
                     with col_c:
-                        st.metric("Errores", stats['errors'])
+                        st.metric("✗ Errores", error_count)
                     
-                    if stats['total_urls'] > 0:
-                        success_rate = stats['success'] / stats['total_urls'] * 100
+                    if len(urls_to_scrape) > 0:
+                        success_rate = success_count / len(urls_to_scrape) * 100
                         st.progress(success_rate / 100)
                         st.caption(f"Tasa de éxito: {success_rate:.1f}%")
                     
                     # Detalles
-                    with st.expander("Ver detalles"):
-                        for result in stats['results']:
+                    with st.expander("📋 Ver detalles"):
+                        for result in results:
                             status_icon = "✓" if result['status'] == 'success' else "✗"
-                            st.write(f"{status_icon} {result['platform']} (URL {result['url_id']}): {result.get('nights_saved', 0)} noches")
+                            st.write(f"{status_icon} **{result['platform']}** (URL {result['url_id']}): {result.get('nights_saved', 0)} noches")
                             if result.get('error'):
-                                st.caption(f"   Error: {result['error']}")
+                                st.caption(f"   ⚠️ Error: {result['error']}")
+                    
+                    # Cleanup
+                    if scheduler.orchestrator:
+                        scheduler.orchestrator.cleanup()
                 
                 except Exception as e:
                     st.error(f"Error durante scraping: {e}")
     
     st.markdown("---")
     
-    # Botones por plataforma
-    st.subheader("Por plataforma")
+    # Botón para ignorar caché
+    st.subheader("🔄 Forzar Re-scraping")
     
-    for platform in platforms.keys():
-        platform_urls_pending = [
-            u for u in urls_to_scrape 
-            if u['plataforma'] == platform
-        ]
-        
-        count = len(platform_urls_pending)
-        disabled = count == 0
-        
-        if st.button(
-            f"{platform} ({count})",
-            key=f"btn_{platform}",
-            disabled=disabled,
-            use_container_width=True
-        ):
-            with st.spinner(f"Scraping {platform}..."):
+    if st.button(
+        "⚡ Scrapear Todo (Ignorar Caché)",
+        help="Scrapea todas las URLs filtradas, incluso si están en caché",
+        use_container_width=True
+    ):
+        if len(urls_filtered) == 0:
+            st.warning("No hay URLs en la selección")
+        else:
+            with st.spinner(f"Scraping {len(urls_filtered)} URLs (forzado)..."):
                 try:
                     scheduler = ScraperScheduler(
-                        cache_hours=cache_hours,
+                        cache_hours=0,  # Ignorar caché
                         headless=headless
                     )
                     
-                    stats = scheduler.scrape_platform(
-                        platform=platform,
-                        days_ahead=days_ahead,
-                        nights=nights
-                    )
+                    results = []
+                    success_count = 0
+                    error_count = 0
                     
-                    st.success(f"✓ {platform} completado!")
-                    st.metric("Éxitos", stats['success'])
-                    st.metric("Errores", stats['errors'])
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
+                    
+                    for idx, url_data in enumerate(urls_filtered):
+                        status_text.text(f"Scraping {url_data['plataforma']} (URL {url_data['id_plataforma_url']})...")
+                        
+                        result = scheduler.scrape_url(url_data, check_in, check_out)
+                        results.append(result)
+                        
+                        if result['status'] == 'success':
+                            success_count += 1
+                        else:
+                            error_count += 1
+                        
+                        progress_bar.progress((idx + 1) / len(urls_filtered))
+                    
+                    status_text.empty()
+                    progress_bar.empty()
+                    
+                    st.success(f"✓ Re-scraping completado!")
+                    
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        st.metric("✓ Éxitos", success_count)
+                    with col_b:
+                        st.metric("✗ Errores", error_count)
+                    
+                    # Cleanup
+                    if scheduler.orchestrator:
+                        scheduler.orchestrator.cleanup()
                 
                 except Exception as e:
                     st.error(f"Error: {e}")

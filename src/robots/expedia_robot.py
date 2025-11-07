@@ -95,28 +95,8 @@ class ExpediaRobotV3(BaseRobot):
     
     def _extract_html(self) -> str:
         """
-        Extrae HTML de la sticky card de precios.
+        Extrae HTML completo de la página.
+        El parser buscará el precio en JSON embebido o en HTML visible
+        de la sticky card de precios.
         """
-        # Buscar sticky card o panel de precios
-        price_selectors = [
-            '[data-stid="property-offer"]',
-            '.uitk-card-roundcorner-all',
-            '.uitk-layout-flex-item-flex-basis-full_width',
-            '[data-testid="price-summary"]'
-        ]
-        
-        for selector in price_selectors:
-            container = self.page.query_selector(selector)
-            if container:
-                html = container.inner_html()
-                # Verificar que tenga precio
-                if '$' in html or '€' in html:
-                    return html
-        
-        # Fallback: sección derecha (sidebar)
-        sidebar = self.page.query_selector('.uitk-layout-grid-item-columnspan-4')
-        if sidebar:
-            return sidebar.inner_html()
-        
-        # Último recurso: todo el body
         return self.page.content()

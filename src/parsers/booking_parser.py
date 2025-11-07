@@ -22,11 +22,38 @@ class BookingParser:
     def parse_price_base(html: str) -> tuple[float, str]:
         """
         Extrae precio base del resumen.
+        Prioridad:
+        1. JSON embebido (b_price_breakdown_simplified)
+        2. HTML visible (data-testid, class)
+        3. Regex genérico
         
         Returns:
             (precio_base, currency)
         """
-        # Patrón: US$323 o €450
+        # 1. Intentar extraer del JSON embebido
+        json_pattern = r'"b_total_price":\s*\[{[^}]*"b_value_user_currency":\s*"([^"]+)"'
+        json_match = re.search(json_pattern, html)
+        
+        if json_match:
+            price_str = json_match.group(1)
+            # Ejemplo: "US$650" o "€450"
+            precio, currency = PriceNormalizer.parse_price(price_str)
+            if precio > 0:
+                return precio, currency
+        
+        # 2. Buscar en HTML visible: <span class="prc-no-css">US$650</span>
+        visible_pattern = r'class="prc-no-css">\s*(US\$|€)([0-9.,]+)\s*<'
+        visible_match = re.search(visible_pattern, html)
+        
+        if visible_match:
+            currency_symbol = visible_match.group(1)
+            price_str = visible_match.group(2)
+            full_str = f"{currency_symbol}{price_str}"
+            precio, currency = PriceNormalizer.parse_price(full_str)
+            if precio > 0:
+                return precio, currency
+        
+        # 3. Patrón genérico: US$323 o €450
         pattern = r'(US\$|€)([0-9.,]+)'
         match = re.search(pattern, html)
         

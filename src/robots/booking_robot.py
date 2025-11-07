@@ -96,25 +96,7 @@ class BookingRobotV3(BaseRobot):
     
     def _extract_html(self) -> str:
         """
-        Extrae HTML del resumen de precios.
+        Extrae HTML completo de la página.
+        El parser buscará el precio en JSON embebido o en HTML visible.
         """
-        # Buscar contenedor de resumen de precios
-        summary_selectors = [
-            '[data-testid="price-summary"]',
-            '.prco-occupancy-price-breakdown',
-            '.hprt-reservation-total-price',
-            '#hprt-reservation-book-now-box'
-        ]
-        
-        for selector in summary_selectors:
-            container = self.page.query_selector(selector)
-            if container:
-                return container.inner_html()
-        
-        # Fallback: sección derecha (sidebar)
-        sidebar = self.page.query_selector('.hprt-reservation-block, .sticky-sidebar')
-        if sidebar:
-            return sidebar.inner_html()
-        
-        # Último recurso: todo el body
         return self.page.content()

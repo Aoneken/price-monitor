@@ -86,34 +86,8 @@ class AirbnbRobotV3(BaseRobot):
     
     def _extract_html(self) -> str:
         """
-        Extrae HTML del breakdown de precios.
-        
-        Intenta abrir el breakdown si hay botón, 
-        sino usa el HTML visible del panel.
+        Extrae HTML completo de la página.
+        El parser buscará el precio en JSON embebido (window.__PRELOADED_STATE__)
+        o en HTML visible del sidebar de reserva.
         """
-        # Intentar abrir breakdown
-        try:
-            # Buscar botón "Ver desglose" o similar
-            breakdown_button = self.page.query_selector(
-                'button:has-text("desglose"), button:has-text("breakdown")'
-            )
-            
-            if breakdown_button:
-                breakdown_button.click()
-                time.sleep(0.5)
-                
-                # Esperar modal o panel expandido
-                self.page.wait_for_selector('[data-testid*="breakdown"]', timeout=3000)
-        
-        except Exception:
-            # No hay breakdown, usar panel visible
-            pass
-        
-        # Extraer HTML del contenedor de precios
-        price_container = self.page.query_selector('[data-section-id="BOOK_IT_SIDEBAR"]')
-        
-        if not price_container:
-            # Fallback: todo el body
-            return self.page.content()
-        
-        return price_container.inner_html()
+        return self.page.content()
