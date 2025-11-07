@@ -19,6 +19,7 @@ Documentación V3 (índice):
 - `docs_v3/SEGURIDAD_CUMPLIMIENTO_V3.md`
 - `docs_v3/MIGRACION_V1_A_V3.md`
 - `docs_v3/VERSIONAMIENTO.md`
+ - `docs_v3/LECCIONES_ERRORES_V1_V2.md`
 
 **Sistema de Inteligencia de Precios para Plataformas de Alojamiento**
 
