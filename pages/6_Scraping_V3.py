@@ -100,12 +100,21 @@ try:
             default=list(platforms.keys())
         )
     
+    # Filtrar establecimientos que tengan al menos una URL en las plataformas seleccionadas
+    establecimientos_validos = set()
+    for url_data in all_urls:
+        if url_data['plataforma'] in filter_platforms:
+            establecimientos_validos.add(url_data['id_establecimiento'])
+    
     with col_f2:
-        # Filtro por establecimiento con nombres
+        # Filtro por establecimiento con nombres (solo los que tienen URLs en plataformas seleccionadas)
         estab_options = {
             f"{establecimientos[eid]['nombre']} (ID:{eid})": eid 
             for eid in establecimientos.keys()
+            if eid in establecimientos_validos  # Solo mostrar establecimientos con URLs en plataformas seleccionadas
         }
+        
+        # Default: todos los establecimientos válidos
         filter_establishments_display = st.multiselect(
             "🏨 Establecimientos",
             options=list(estab_options.keys()),
@@ -114,10 +123,11 @@ try:
         filter_establishments = [estab_options[name] for name in filter_establishments_display]
     
     with col_f3:
-        # Filtro por URL específica (opcional)
+        # Filtro por URL específica (opcional) - solo URLs de plataformas seleccionadas
         url_options = {
             f"{u['plataforma']}-{establecimientos_dict.get(u['id_establecimiento'], 'N/A')[:20]}": u['id_plataforma_url']
             for u in all_urls
+            if u['plataforma'] in filter_platforms  # Solo URLs de plataformas seleccionadas
         }
         filter_urls_display = st.multiselect(
             "🔗 URLs específicas",

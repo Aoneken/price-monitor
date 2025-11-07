@@ -22,6 +22,14 @@ st.set_page_config(
 )
 
 st.title("📊 Monitoreo de Datos V3")
+
+# Control manual de actualización
+col_title, col_refresh = st.columns([4, 1])
+with col_refresh:
+    if st.button("🔄 Actualizar", use_container_width=True):
+        st.cache_data.clear()
+        st.rerun()
+
 st.markdown("---")
 
 
@@ -207,6 +215,7 @@ if not platform_df.empty:
             platform_df,
             hide_index=True,
             use_container_width=True,
+            height=200,  # Altura fija para evitar parpadeo
             column_config={
                 "plataforma": "Plataforma",
                 "urls_con_datos": "URLs con Datos",
@@ -236,7 +245,7 @@ activity_df = get_recent_activity()
 if not activity_df.empty:
     # Agregar indicador de estado
     activity_df['estado'] = activity_df.apply(
-        lambda row: '✗ Error' if row['error_log'] else '✓ OK',
+        lambda row: '✗ Error' if pd.notna(row['error_log']) else '✓ OK',
         axis=1
     )
     
@@ -245,10 +254,12 @@ if not activity_df.empty:
         lambda x: x[:50] + '...' if len(x) > 50 else x
     )
     
+    # Usar height fijo para evitar parpadeo
     st.dataframe(
         activity_df[['estado', 'plataforma', 'url_corta', 'fecha_scrape', 'precio_base', 'noches_encontradas']],
         hide_index=True,
         use_container_width=True,
+        height=400,  # Altura fija
         column_config={
             "estado": "Estado",
             "plataforma": "Plataforma",
@@ -315,9 +326,5 @@ else:
 # Footer
 st.markdown("---")
 
-# Botón de refresco
-if st.button("🔄 Actualizar Datos"):
-    st.cache_data.clear()
-    st.rerun()
+st.caption("💡 SDK V3 - Price Monitor | Datos cacheados por 60 segundos. Usa el botón 'Actualizar' para refrescar.")
 
-st.caption("SDK V3 - Price Monitor | Datos actualizados automáticamente cada 60 segundos")
