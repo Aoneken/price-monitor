@@ -164,7 +164,8 @@ if buscar or 'datos_cargados' not in st.session_state:
                 st.metric("Registros Ocupados", len(ocupados))
             
             with col_m4:
-                con_error = df[df['Error'].notna()]
+                # Usar la columna original 'error_log' antes del rename
+                con_error = df_display[df_display['Error'].notna()]
                 st.metric("Con Errores", len(con_error))
             
             st.divider()
