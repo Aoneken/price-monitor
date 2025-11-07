@@ -303,3 +303,153 @@ class DatabaseAdapter:
         """
         recent = self.get_recent_scrapes(cache_hours)
         return url_id not in recent
+    
+    def should_scrape_date(
+        self,
+        url_id: int,
+        fecha: date,
+        cache_hours: int = 24
+    ) -> bool:
+        """
+        Determina si una fecha específica de una URL debe ser scrapeada.
+        
+        Retorna False si:
+        - Ya existe precio para esa fecha_noche
+        - Y fue scrapeado hace menos de cache_hours
+        
+        Args:
+            url_id: id_plataforma_url
+            fecha: Fecha a verificar
+            cache_hours: Horas de caché
+        
+        Returns:
+            True si debe scrapearse, False si está en caché
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT COUNT(*) 
+                FROM Precios
+                WHERE id_plataforma_url = ?
+                  AND fecha_noche = ?
+                  AND fecha_scrape >= datetime('now', '-{} hours')
+            """.format(cache_hours), (url_id, fecha.isoformat()))
+            
+            count = cursor.fetchone()[0]
+            return count == 0  # True si NO existe en caché
+    
+    def save_price_per_night(
+        self,
+        url_id: int,
+        fecha_noche: date,
+        precio: float,
+        moneda: str = 'USD',
+        noches_scrapeadas: Optional[int] = None,
+        precio_total_original: Optional[float] = None,
+        incluye_desayuno: str = 'No Informa',
+        wifi_incluido: str = 'No',
+        esta_ocupado: bool = False,
+        metadatos: Optional[Dict] = None
+    ) -> bool:
+        """
+        Guarda el precio de una noche individual con metadata completa.
+        
+        Args:
+            url_id: id_plataforma_url
+            fecha_noche: Fecha de la noche
+            precio: Precio por noche (normalizado)
+            moneda: Código de moneda (USD, EUR, ARS)
+            noches_scrapeadas: Número de noches de la búsqueda original (3, 2, 1)
+            precio_total_original: Precio total antes de normalización
+            incluye_desayuno: 'Sí', 'No', 'No Informa'
+            wifi_incluido: 'Sí', 'No'
+            esta_ocupado: True si precio = 0 por ocupación
+            metadatos: Dict con metadata adicional (será JSON stringify)
+        
+        Returns:
+            True si se guardó exitosamente
+        """
+        import json
+        
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                metadatos_json = json.dumps(metadatos) if metadatos else None
+                
+                cursor.execute("""
+                    INSERT OR REPLACE INTO Precios (
+                        id_plataforma_url,
+                        fecha_noche,
+                        precio_base,
+                        esta_ocupado,
+                        incluye_limpieza_base,
+                        incluye_impuestos_base,
+                        ofrece_desayuno,
+                        fecha_scrape,
+                        noches_encontradas,
+                        error_log,
+                        precio_total_original,
+                        moneda,
+                        metadatos_scraping
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    url_id,
+                    fecha_noche.isoformat(),
+                    precio,
+                    esta_ocupado,
+                    'No Informa',  # limpieza deprecated
+                    'No Informa',  # impuestos deprecated
+                    incluye_desayuno,
+                    datetime.now(),
+                    noches_scrapeadas,
+                    None,  # error_log solo para errores
+                    precio_total_original,
+                    moneda,
+                    metadatos_json
+                ))
+                
+                conn.commit()
+                return True
+        
+        except Exception as e:
+            print(f"Error saving price: {e}")
+            return False
+    
+    def mark_date_occupied(
+        self,
+        url_id: int,
+        fecha_noche: date,
+        intentos_fallidos: List[str],
+        moneda: str = 'USD'
+    ) -> bool:
+        """
+        Marca una fecha como ocupada ($0) después de fallar todas las búsquedas.
+        
+        Args:
+            url_id: id_plataforma_url
+            fecha_noche: Fecha a marcar como ocupada
+            intentos_fallidos: Lista de intentos ['3_noches', '2_noches', '1_noche']
+            moneda: Código de moneda
+        
+        Returns:
+            True si se guardó exitosamente
+        """
+        import json
+        
+        metadatos = {
+            'intentos_fallidos': intentos_fallidos,
+            'razon': 'no_disponible_todas_duraciones',
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        return self.save_price_per_night(
+            url_id=url_id,
+            fecha_noche=fecha_noche,
+            precio=0.0,
+            moneda=moneda,
+            noches_scrapeadas=None,
+            precio_total_original=None,
+            esta_ocupado=True,
+            metadatos=metadatos
+        )
