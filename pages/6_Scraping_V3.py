@@ -12,7 +12,7 @@ import time
 # Agregar root al path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from scripts.scheduler_v3 import ScraperScheduler
+from scripts.scheduler_incremental_v3 import IncrementalScraperScheduler
 from src.persistence.database_adapter import DatabaseAdapter
 
 
@@ -256,7 +256,7 @@ if st.session_state.scraping_in_progress:
     # Determinar qué URLs scrapear
     force_all = st.session_state.scraping_filters.get('force_all', False)
     urls_to_process = urls_filtered if force_all else urls_to_scrape
-    scheduler = ScraperScheduler(cache_hours=0 if force_all else cache_hours, headless=headless)
+    scheduler = IncrementalScraperScheduler(cache_hours=0 if force_all else cache_hours, headless=headless)
     
     # Contenedores para actualización dinámica
     progress_container = st.empty()
@@ -268,6 +268,7 @@ if st.session_state.scraping_in_progress:
         total_urls = len(urls_to_process)
         success_count = 0
         error_count = 0
+        fechas_resueltas = 0
         
         for idx, url_data in enumerate(urls_to_process):
             # Actualizar progreso
@@ -276,47 +277,50 @@ if st.session_state.scraping_in_progress:
             
             # Mostrar URL actual
             estab_name = establecimientos_dict.get(url_data['id_establecimiento'], 'N/A')
-            status_container.info(f"⏳ Scraping: {url_data['plataforma']} - {estab_name}")
+            status_container.info(f"⏳ Scraping incremental (3→2→1 noches): {url_data['plataforma']} - {estab_name}")
             
-            # Ejecutar scraping
-            result = scheduler.scrape_url(url_data, check_in, check_out)
+            # Ejecutar scraping INCREMENTAL con rango de fechas
+            stats = scheduler.scrape_date_range(url_data, check_in, check_out)
             
-            # Formatear mensaje de error de forma más legible
-            if result['status'] != 'success':
-                error_msg = result.get('error', 'Error desconocido')
-                # Acortar mensajes de timeout de Playwright
-                if 'Timeout' in error_msg and 'Page.goto' in error_msg:
-                    error_msg = f"Timeout de navegación ({url_data['plataforma']})"
-                elif 'Timeout' in error_msg and 'wait_for_selector' in error_msg:
-                    error_msg = f"Timeout esperando precio ({url_data['plataforma']})"
-                elif 'Target page, context or browser has been closed' in error_msg:
-                    error_msg = "Navegador cerrado inesperadamente"
-                elif len(error_msg) > 100:
-                    # Acortar mensajes muy largos
-                    error_msg = error_msg[:97] + "..."
-                mensaje = error_msg
+            # Analizar resultados
+            url_success = stats['success_3'] + stats['success_2'] + stats['success_1']
+            url_errors = stats['occupied']
+            fechas_totales = stats['total_dates']
+            
+            # Formatear mensaje
+            if url_success > 0:
+                mensaje_parts = []
+                if stats['success_3'] > 0:
+                    mensaje_parts.append(f"{stats['success_3']}×3 noches")
+                if stats['success_2'] > 0:
+                    mensaje_parts.append(f"{stats['success_2']}×2 noches")
+                if stats['success_1'] > 0:
+                    mensaje_parts.append(f"{stats['success_1']}×1 noche")
+                mensaje = f"✓ {', '.join(mensaje_parts)} | {fechas_totales} fechas"
             else:
-                mensaje = f"{result.get('nights_saved', 0)} precios guardados"
+                mensaje = f"✗ Todas las fechas fallaron o ocupadas"
             
             # Guardar resultado
             st.session_state.scraping_results.append({
                 'Establecimiento': estab_name,
                 'Plataforma': url_data['plataforma'],
-                'Estado': '✅ OK' if result['status'] == 'success' else '❌ Error',
-                'Noches': result.get('nights_saved', 0),
+                'Estado': '✅ OK' if url_success > 0 else '❌ Error',
+                'Noches': fechas_totales,
                 'Mensaje': mensaje
             })
             
-            if result['status'] == 'success':
+            if url_success > 0:
                 success_count += 1
+                fechas_resueltas += fechas_totales
             else:
                 error_count += 1
             
             # Actualizar métricas
-            col_m1, col_m2, col_m3 = metrics_container.columns(3)
+            col_m1, col_m2, col_m3, col_m4 = metrics_container.columns(4)
             col_m1.metric("✅ Éxitos", success_count)
             col_m2.metric("❌ Errores", error_count)
-            col_m3.metric("📊 Total", f"{idx + 1}/{total_urls}")
+            col_m3.metric("📅 Fechas", fechas_resueltas)
+            col_m4.metric("📊 Total", f"{idx + 1}/{total_urls}")
             
             # Actualizar tabla con resultados parciales
             df_results = pd.DataFrame(st.session_state.scraping_results)
