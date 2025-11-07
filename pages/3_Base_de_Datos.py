@@ -211,6 +211,158 @@ if buscar or 'datos_cargados' not in st.session_state:
 else:
     st.info("👆 Configura los filtros y haz clic en 'Buscar en BBDD' para ver los resultados.")
 
+# === SECCIÓN 3: GESTIÓN DE DATOS (ELIMINAR) ===
+st.divider()
+st.header("🗑️ Gestión de Datos")
+
+with st.expander("⚠️ Eliminar Datos de la Base de Datos", expanded=False):
+    st.warning("**ATENCIÓN**: Esta acción es irreversible. Los datos eliminados no se pueden recuperar.")
+    
+    st.subheader("Configurar Eliminación")
+    
+    col_del1, col_del2 = st.columns(2)
+    
+    with col_del1:
+        # Filtro por Establecimientos para eliminar
+        establecimientos_eliminar = st.multiselect(
+            "Establecimientos a eliminar",
+            options=nombres_est,
+            default=[],
+            help="Selecciona establecimientos (dejar vacío para todos)",
+            key="del_establecimientos"
+        )
+        
+        # Filtro por Plataformas para eliminar
+        plataformas_eliminar = st.multiselect(
+            "Plataformas a eliminar",
+            options=["Booking", "Airbnb", "Expedia", "Vrbo"],
+            default=[],
+            help="Selecciona plataformas (dejar vacío para todas)",
+            key="del_plataformas"
+        )
+    
+    with col_del2:
+        st.subheader("Período a Eliminar")
+        usar_rango_fecha = st.checkbox("Limitar por rango de fechas", value=True, key="del_usar_fecha")
+        
+        if usar_rango_fecha:
+            fecha_del_inicio = st.date_input(
+                "Desde (fecha noche)",
+                value=(datetime.now() - timedelta(days=30)).date(),
+                key="del_fecha_inicio"
+            )
+            fecha_del_fin = st.date_input(
+                "Hasta (fecha noche)",
+                value=datetime.now().date(),
+                key="del_fecha_fin"
+            )
+        else:
+            fecha_del_inicio = None
+            fecha_del_fin = None
+    
+    # Vista previa de lo que se eliminará
+    st.divider()
+    
+    if st.button("🔍 Vista Previa de Eliminación", use_container_width=True):
+        try:
+            # Preparar filtros
+            ids_est_eliminar = None
+            if establecimientos_eliminar and "Todos" not in establecimientos_eliminar:
+                ids_est_eliminar = [ids_est_map[nombre] for nombre in establecimientos_eliminar if nombre in ids_est_map]
+            
+            plat_eliminar = plataformas_eliminar if plataformas_eliminar else None
+            
+            fecha_inicio_dt = datetime.combine(fecha_del_inicio, datetime.min.time()) if usar_rango_fecha and fecha_del_inicio else None
+            fecha_fin_dt = datetime.combine(fecha_del_fin, datetime.min.time()) if usar_rango_fecha and fecha_del_fin else None
+            
+            # Contar registros
+            if not any([ids_est_eliminar, plat_eliminar, fecha_inicio_dt, fecha_fin_dt]):
+                st.error("⚠️ Debe especificar al menos un filtro (establecimiento, plataforma o fechas)")
+            else:
+                count = db.count_precios_by_filters(
+                    ids_establecimiento=ids_est_eliminar,
+                    plataformas=plat_eliminar,
+                    fecha_noche_inicio=fecha_inicio_dt,
+                    fecha_noche_fin=fecha_fin_dt
+                )
+                
+                if count > 0:
+                    st.error(f"⚠️ **{count} registros** serán eliminados con estos filtros")
+                    
+                    # Mostrar resumen
+                    st.info(f"""
+                    **Filtros aplicados:**
+                    - Establecimientos: {', '.join(establecimientos_eliminar) if establecimientos_eliminar else 'Todos'}
+                    - Plataformas: {', '.join(plataformas_eliminar) if plataformas_eliminar else 'Todas'}
+                    - Fechas: {fecha_del_inicio if usar_rango_fecha else 'Sin límite'} a {fecha_del_fin if usar_rango_fecha else 'Sin límite'}
+                    """)
+                else:
+                    st.success("✅ No hay registros que coincidan con estos filtros")
+        
+        except Exception as e:
+            st.error(f"Error al contar registros: {e}")
+    
+    # Confirmación y eliminación
+    st.divider()
+    st.subheader("Confirmación de Eliminación")
+    
+    col_conf1, col_conf2 = st.columns([3, 1])
+    
+    with col_conf1:
+        confirmacion = st.text_input(
+            "Escribe 'ELIMINAR' para confirmar:",
+            key="confirmacion_eliminar",
+            help="Debes escribir exactamente 'ELIMINAR' en mayúsculas"
+        )
+    
+    with col_conf2:
+        st.write("")  # Espaciado
+        st.write("")  # Espaciado
+        eliminar_btn = st.button(
+            "🗑️ ELIMINAR DATOS",
+            type="primary",
+            disabled=(confirmacion != "ELIMINAR"),
+            use_container_width=True
+        )
+    
+    if eliminar_btn and confirmacion == "ELIMINAR":
+        try:
+            # Preparar filtros
+            ids_est_eliminar = None
+            if establecimientos_eliminar and "Todos" not in establecimientos_eliminar:
+                ids_est_eliminar = [ids_est_map[nombre] for nombre in establecimientos_eliminar if nombre in ids_est_map]
+            
+            plat_eliminar = plataformas_eliminar if plataformas_eliminar else None
+            
+            fecha_inicio_dt = datetime.combine(fecha_del_inicio, datetime.min.time()) if usar_rango_fecha and fecha_del_inicio else None
+            fecha_fin_dt = datetime.combine(fecha_del_fin, datetime.min.time()) if usar_rango_fecha and fecha_del_fin else None
+            
+            # Validar filtros
+            if not any([ids_est_eliminar, plat_eliminar, fecha_inicio_dt, fecha_fin_dt]):
+                st.error("⚠️ Debe especificar al menos un filtro para eliminar datos")
+            else:
+                with st.spinner("Eliminando registros..."):
+                    deleted_count = db.delete_precios_by_filters(
+                        ids_establecimiento=ids_est_eliminar,
+                        plataformas=plat_eliminar,
+                        fecha_noche_inicio=fecha_inicio_dt,
+                        fecha_noche_fin=fecha_fin_dt
+                    )
+                
+                st.success(f"✅ Se eliminaron **{deleted_count}** registros exitosamente")
+                
+                # Limpiar confirmación
+                st.session_state['confirmacion_eliminar'] = ""
+                
+                # Recomendar recargar
+                st.info("💡 Haz clic en 'Buscar en BBDD' nuevamente para actualizar los resultados")
+        
+        except ValueError as ve:
+            st.error(f"⚠️ Error de validación: {ve}")
+        except Exception as e:
+            st.error(f"❌ Error al eliminar datos: {e}")
+            st.exception(e)
+
 # Información adicional
 with st.expander("ℹ️ Guía de Filtros"):
     st.markdown("""

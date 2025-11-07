@@ -444,6 +444,147 @@ class DatabaseManager:
                 'total_registros': 0,
                 'ultimo_scrape': None
             }
+    
+    # ========================================
+    # ELIMINACIÓN DE DATOS
+    # ========================================
+    
+    def delete_precios_by_filters(
+        self,
+        ids_establecimiento: Optional[List[int]] = None,
+        plataformas: Optional[List[str]] = None,
+        fecha_noche_inicio: Optional[datetime] = None,
+        fecha_noche_fin: Optional[datetime] = None
+    ) -> int:
+        """
+        Elimina registros de precios según filtros especificados.
+        Útil para limpiar datos antiguos o incorrectos.
+        
+        Args:
+            ids_establecimiento: Lista de IDs de establecimientos
+            plataformas: Lista de plataformas
+            fecha_noche_inicio: Fecha de inicio del rango
+            fecha_noche_fin: Fecha de fin del rango
+            
+        Returns:
+            Número de registros eliminados
+            
+        Raises:
+            ValueError: Si no se proporciona ningún filtro (seguridad)
+        """
+        # SEGURIDAD: Al menos un filtro debe estar presente
+        if not any([ids_establecimiento, plataformas, fecha_noche_inicio, fecha_noche_fin]):
+            raise ValueError(
+                "Por seguridad, debe proporcionar al menos un filtro para eliminar datos. "
+                "Para eliminar todo, use delete_all_precios()."
+            )
+        
+        # Construir query dinámicamente
+        query = """
+            DELETE FROM Precios 
+            WHERE id_plataforma_url IN (
+                SELECT id_plataforma_url FROM Plataformas_URL WHERE 1=1
+        """
+        params = []
+        
+        if ids_establecimiento:
+            placeholders = ','.join('?' * len(ids_establecimiento))
+            query += f" AND id_establecimiento IN ({placeholders})"
+            params.extend(ids_establecimiento)
+        
+        if plataformas:
+            placeholders = ','.join('?' * len(plataformas))
+            query += f" AND plataforma IN ({placeholders})"
+            params.extend(plataformas)
+        
+        query += ")"
+        
+        # Agregar filtros de fecha
+        if fecha_noche_inicio:
+            query += " AND fecha_noche >= ?"
+            params.append(fecha_noche_inicio.date())
+        
+        if fecha_noche_fin:
+            query += " AND fecha_noche <= ?"
+            params.append(fecha_noche_fin.date())
+        
+        # Ejecutar eliminación
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            conn.commit()
+            deleted_count = cursor.rowcount
+            logger.info(f"Eliminados {deleted_count} registros de precios")
+            return deleted_count
+    
+    def delete_all_precios(self) -> int:
+        """
+        Elimina TODOS los registros de precios.
+        CUIDADO: Esta operación es irreversible.
+        
+        Returns:
+            Número de registros eliminados
+        """
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM Precios")
+            conn.commit()
+            deleted_count = cursor.rowcount
+            logger.warning(f"⚠️  TODOS los precios fueron eliminados: {deleted_count} registros")
+            return deleted_count
+    
+    def count_precios_by_filters(
+        self,
+        ids_establecimiento: Optional[List[int]] = None,
+        plataformas: Optional[List[str]] = None,
+        fecha_noche_inicio: Optional[datetime] = None,
+        fecha_noche_fin: Optional[datetime] = None
+    ) -> int:
+        """
+        Cuenta registros que serían eliminados con los filtros dados.
+        Útil para confirmación antes de eliminar.
+        
+        Args:
+            ids_establecimiento: Lista de IDs de establecimientos
+            plataformas: Lista de plataformas
+            fecha_noche_inicio: Fecha de inicio del rango
+            fecha_noche_fin: Fecha de fin del rango
+            
+        Returns:
+            Número de registros que coinciden con los filtros
+        """
+        query = """
+            SELECT COUNT(*) as total FROM Precios 
+            WHERE id_plataforma_url IN (
+                SELECT id_plataforma_url FROM Plataformas_URL WHERE 1=1
+        """
+        params = []
+        
+        if ids_establecimiento:
+            placeholders = ','.join('?' * len(ids_establecimiento))
+            query += f" AND id_establecimiento IN ({placeholders})"
+            params.extend(ids_establecimiento)
+        
+        if plataformas:
+            placeholders = ','.join('?' * len(plataformas))
+            query += f" AND plataforma IN ({placeholders})"
+            params.extend(plataformas)
+        
+        query += ")"
+        
+        if fecha_noche_inicio:
+            query += " AND fecha_noche >= ?"
+            params.append(fecha_noche_inicio.date())
+        
+        if fecha_noche_fin:
+            query += " AND fecha_noche <= ?"
+            params.append(fecha_noche_fin.date())
+        
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            row = cursor.fetchone()
+            return row['total'] if row else 0
 
 
 # Singleton para uso global
