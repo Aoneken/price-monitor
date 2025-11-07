@@ -351,8 +351,9 @@ with st.expander("⚠️ Eliminar Datos de la Base de Datos", expanded=False):
                 
                 st.success(f"✅ Se eliminaron **{deleted_count}** registros exitosamente")
                 
-                # Limpiar confirmación
-                st.session_state['confirmacion_eliminar'] = ""
+                # Limpiar confirmación (usando del en lugar de asignación)
+                if 'confirmacion_eliminar' in st.session_state:
+                    del st.session_state['confirmacion_eliminar']
                 
                 # Recomendar recargar
                 st.info("💡 Haz clic en 'Buscar en BBDD' nuevamente para actualizar los resultados")
