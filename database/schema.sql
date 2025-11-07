@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS Plataformas_URL (
     id_establecimiento INTEGER NOT NULL,
     
     -- Nombre de la plataforma (debe coincidir con un robot implementado)
-    plataforma TEXT NOT NULL CHECK(plataforma IN ('Booking', 'Airbnb', 'Vrbo')),
+    plataforma TEXT NOT NULL CHECK(plataforma IN ('Booking', 'Airbnb', 'Expedia', 'Vrbo')),
     
     -- La URL exacta que el scraper debe visitar
     url TEXT NOT NULL UNIQUE,

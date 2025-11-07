@@ -84,38 +84,116 @@ if fecha_fin < fecha_inicio:
 iniciar_scraping = st.button("🚀 INICIAR MONITOREO", type="primary", use_container_width=True)
 
 if iniciar_scraping:
-    st.header("📊 Progreso del Scraping")
+    st.header("📊 Progreso del Scraping en Tiempo Real")
     
     # Contenedores para actualización en tiempo real
-    contenedor_estado = st.empty()
+    col_estado1, col_estado2 = st.columns([2, 1])
+    with col_estado1:
+        contenedor_estado = st.empty()
+    with col_estado2:
+        contenedor_stats = st.empty()
+    
     contenedor_progreso = st.empty()
+    contenedor_detalles = st.empty()
     contenedor_tabla = st.empty()
     contenedor_log = st.empty()
     
     # Lista para acumular resultados
     resultados_tabla = []
+    estadisticas = {
+        'exitosos': 0,
+        'no_disponibles': 0,
+        'errores': 0,
+        'total': 0,
+        'url_actual': '',
+        'plataforma_actual': '',
+        'fecha_actual': '',
+        'intento_noches': 0
+    }
     
     # Función callback para actualizar UI
     def callback_progreso(mensaje, progreso, resultado):
+        # Actualizar mensaje principal
         if mensaje:
-            contenedor_estado.info(f"🔄 {mensaje}")
+            # Extraer información del mensaje para mostrar detalles
+            if "Procesando" in mensaje:
+                estadisticas['url_actual'] = mensaje
+                contenedor_estado.info(f"🔄 {mensaje}")
+            elif "[" in mensaje and "]" in mensaje:
+                # Mensajes con formato [Plataforma] Fecha
+                partes = mensaje.split("]")
+                if len(partes) >= 2:
+                    estadisticas['plataforma_actual'] = partes[0].replace("[", "").strip()
+                    estadisticas['fecha_actual'] = partes[1].strip().split("(")[0].strip()
+                    
+                    # Extraer número de noches si está disponible
+                    if "noche" in mensaje.lower():
+                        import re
+                        match = re.search(r'(\d+)\s*noche', mensaje.lower())
+                        if match:
+                            estadisticas['intento_noches'] = int(match.group(1))
+                    
+                contenedor_estado.info(f"🔄 {mensaje}")
+            else:
+                contenedor_estado.info(f"🔄 {mensaje}")
         
+        # Actualizar barra de progreso
         if progreso is not None:
-            contenedor_progreso.progress(progreso)
+            porcentaje = int(progreso * 100)
+            contenedor_progreso.progress(progreso, text=f"Progreso: {porcentaje}%")
         
+        # Mostrar detalles de la instancia actual
+        if estadisticas['plataforma_actual'] or estadisticas['fecha_actual']:
+            with contenedor_detalles.container():
+                col_det1, col_det2, col_det3 = st.columns(3)
+                with col_det1:
+                    st.metric("🌐 Plataforma Actual", estadisticas['plataforma_actual'] or "-")
+                with col_det2:
+                    st.metric("📅 Fecha Procesando", estadisticas['fecha_actual'] or "-")
+                with col_det3:
+                    noches_text = f"{estadisticas['intento_noches']} noche(s)" if estadisticas['intento_noches'] > 0 else "-"
+                    st.metric("🏨 Buscando", noches_text)
+        
+        # Procesar resultado
         if resultado:
+            estadisticas['total'] += 1
+            
+            # Clasificar resultado
+            if resultado.error and "No disponible" not in resultado.error:
+                estadisticas['errores'] += 1
+                estado_emoji = "❌"
+                estado_texto = f"Error: {resultado.error[:30]}..."
+            elif resultado.precio > 0:
+                estadisticas['exitosos'] += 1
+                estado_emoji = "✅"
+                estado_texto = "Precio encontrado"
+            else:
+                estadisticas['no_disponibles'] += 1
+                estado_emoji = "🚫"
+                estado_texto = "No disponible"
+            
             # Agregar resultado a la tabla
             resultados_tabla.append({
+                "Estado": estado_emoji,
                 "Plataforma": resultado.plataforma,
                 "Fecha": resultado.fecha_noche.strftime('%Y-%m-%d'),
-                "Precio": f"${resultado.precio:.2f}" if resultado.precio > 0 else "No disponible",
+                "Precio": f"${resultado.precio:.2f}" if resultado.precio > 0 else "-",
                 "Noches": resultado.noches if resultado.noches > 0 else "-",
-                "Estado": "✅ OK" if not resultado.error else f"❌ {resultado.error[:30]}..."
+                "Detalle": estado_texto,
+                "Hora": resultado.timestamp.strftime('%H:%M:%S')
             })
             
-            # Actualizar tabla (mostrar últimos 20)
+            # Actualizar estadísticas en tiempo real
+            with contenedor_stats.container():
+                st.metric(
+                    "Progreso",
+                    f"{estadisticas['total']} procesados",
+                    delta=f"✅ {estadisticas['exitosos']} | 🚫 {estadisticas['no_disponibles']} | ❌ {estadisticas['errores']}"
+                )
+            
+            # Actualizar tabla (mostrar últimos 15)
             contenedor_tabla.dataframe(
-                resultados_tabla[-20:],
+                resultados_tabla[-15:],
                 use_container_width=True,
                 hide_index=True
             )

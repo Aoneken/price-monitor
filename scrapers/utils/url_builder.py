@@ -85,22 +85,39 @@ class URLBuilder:
         """
         fecha_checkout = fecha_checkin + timedelta(days=noches)
         
-        parsed = urlparse(url_base)
-        params = parse_qs(parsed.query)
+        # Método simple que funciona
+        checkin_str = fecha_checkin.strftime('%Y-%m-%d')
+        checkout_str = fecha_checkout.strftime('%Y-%m-%d')
         
-        # Parámetros de Vrbo
-        params['startDate'] = [fecha_checkin.strftime('%Y-%m-%d')]
-        params['endDate'] = [fecha_checkout.strftime('%Y-%m-%d')]
-        params['adults'] = ['2']
+        separador = '&' if '?' in url_base else '?'
+        url_final = f"{url_base}{separador}startDate={checkin_str}&endDate={checkout_str}&adults=2"
         
-        nueva_query = urlencode(params, doseq=True)
-        nueva_url = urlunparse((
-            parsed.scheme,
-            parsed.netloc,
-            parsed.path,
-            parsed.params,
-            nueva_query,
-            parsed.fragment
-        ))
+        return url_final
+    
+    @staticmethod
+    def expedia_url(url_base: str, fecha_checkin: datetime, noches: int) -> str:
+        """
+        Construye URL de Expedia con parámetros de búsqueda.
         
-        return nueva_url
+        Args:
+            url_base: URL base del hotel en Expedia
+            fecha_checkin: Fecha de check-in
+            noches: Número de noches
+            
+        Returns:
+            URL completa con parámetros
+            
+        Ejemplo:
+            Input: https://www.expedia.com/Hotel-Name.h12345.Hotel-Information
+            Output: https://www.expedia.com/Hotel-Name.h12345.Hotel-Information?chkin=2025-12-01&chkout=2025-12-04
+        """
+        fecha_checkout = fecha_checkin + timedelta(days=noches)
+        
+        # Formato de Expedia: chkin y chkout en formato MM/DD/YYYY
+        checkin_str = fecha_checkin.strftime('%m/%d/%Y')
+        checkout_str = fecha_checkout.strftime('%m/%d/%Y')
+        
+        separador = '&' if '?' in url_base else '?'
+        url_final = f"{url_base}{separador}chkin={checkin_str}&chkout={checkout_str}&adults=2"
+        
+        return url_final

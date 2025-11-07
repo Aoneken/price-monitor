@@ -107,5 +107,47 @@
       "text=/desayuno/i",
       "text=/breakfast/i"
     ]
+  },
+  "Expedia": {
+    "precio": [
+      "span[data-testid='price-summary-total-amount']",
+      "[data-testid='price-summary-total-amount']",
+      "div.uitk-price-lockup span",
+      "span.uitk-text",
+      "div[data-stid='price-summary'] span",
+      ".price-summary span",
+      "button[data-stid='submit-hotel-reserve'] span"
+    ],
+    "no_disponible": [
+      "text=/no disponible/i",
+      "text=/not available/i",
+      "text=/agotado/i",
+      "text=/sold out/i",
+      "text=/no rooms/i",
+      "div[data-stid='messaging-card-text']",
+      ".uitk-messaging"
+    ],
+    "captcha": [
+      "text=/verifica que eres humano/i",
+      "text=/confirm you're human/i",
+      "text=/captcha/i",
+      "#challenge-running",
+      "iframe[src*='captcha']",
+      "iframe[src*='recaptcha']"
+    ],
+    "limpieza_incluida": [
+      "text=/tarifa de limpieza/i",
+      "text=/cleaning fee/i"
+    ],
+    "impuestos_incluidos": [
+      "text=/impuestos y tasas/i",
+      "text=/taxes and fees/i",
+      "text=/incluye impuestos/i"
+    ],
+    "desayuno_incluido": [
+      "text=/desayuno incluido/i",
+      "text=/breakfast included/i",
+      "text=/free breakfast/i"
+    ]
   }
 }

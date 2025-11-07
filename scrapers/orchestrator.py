@@ -135,19 +135,26 @@ class ScrapingOrchestrator:
                 # 6. BUCLE POR CADA FECHA
                 total_fechas = len(fechas_a_buscar)
                 for fecha_idx, fecha in enumerate(fechas_a_buscar, 1):
-                    mensaje = f"[{url_info['plataforma']}] {fecha.date()} ({fecha_idx}/{total_fechas})"
+                    # Mensaje más detallado para la UI
+                    mensaje_base = f"[{url_info['plataforma']}] {fecha.date()} ({fecha_idx}/{total_fechas})"
+                    
+                    # Reportar inicio de búsqueda
                     self._reportar_progreso(
-                        mensaje,
+                        f"{mensaje_base} - Iniciando búsqueda...",
                         (idx - 1 + fecha_idx / total_fechas) / total_urls,
                         None
                     )
                     
                     # 7. EJECUTAR EL ROBOT CON RETRY LOGIC
-                    resultado_scrape = self._ejecutar_con_retry(
+                    # Wrapper para reportar progreso durante la búsqueda
+                    resultado_scrape = self._ejecutar_con_retry_y_progreso(
                         robot,
                         browser,
                         url_info['url'],
-                        fecha
+                        fecha,
+                        url_info['plataforma'],
+                        mensaje_base,
+                        (idx - 1 + fecha_idx / total_fechas) / total_urls
                     )
                     
                     # 8. GUARDAR EN BASE DE DATOS
@@ -209,6 +216,96 @@ class ScrapingOrchestrator:
                 
                 # Exponential backoff
                 tiempo_espera = 2 ** intento  # 2s, 4s, 8s
+                logger.info(f"Reintentando en {tiempo_espera}s...")
+                time.sleep(tiempo_espera)
+        
+        # No debería llegar aquí, pero por seguridad
+        return {
+            "precio": 0,
+            "noches": 0,
+            "detalles": None,
+            "error": "Error desconocido"
+        }
+    
+    def _ejecutar_con_retry_y_progreso(
+        self,
+        robot,
+        browser,
+        url: str,
+        fecha: datetime,
+        plataforma: str,
+        mensaje_base: str,
+        progreso_base: float,
+        max_intentos: int = 3
+    ) -> Dict:
+        """
+        Ejecuta el robot con retry logic y reporta progreso detallado.
+        
+        Returns:
+            Diccionario con el resultado del scraping
+        """
+        import time
+        
+        for intento in range(1, max_intentos + 1):
+            try:
+                # Reportar intento
+                if intento > 1:
+                    self._reportar_progreso(
+                        f"{mensaje_base} - Reintento {intento}/{max_intentos}",
+                        progreso_base,
+                        None
+                    )
+                
+                # Reportar inicio de búsqueda con lógica 3->2->1
+                self._reportar_progreso(
+                    f"{mensaje_base} - Buscando 3 noches...",
+                    progreso_base,
+                    None
+                )
+                
+                resultado = robot.buscar(browser, url, fecha)
+                
+                # Reportar éxito
+                if resultado['precio'] > 0:
+                    self._reportar_progreso(
+                        f"{mensaje_base} - ✅ Precio encontrado: ${resultado['precio']:.2f}",
+                        progreso_base,
+                        None
+                    )
+                elif resultado['error'] and "No disponible" in resultado['error']:
+                    self._reportar_progreso(
+                        f"{mensaje_base} - 🚫 No disponible",
+                        progreso_base,
+                        None
+                    )
+                
+                return resultado
+                
+            except Exception as e:
+                logger.error(f"Error en intento {intento}/{max_intentos}: {e}")
+                
+                self._reportar_progreso(
+                    f"{mensaje_base} - ⚠️ Error en intento {intento}: {str(e)[:50]}",
+                    progreso_base,
+                    None
+                )
+                
+                if intento == max_intentos:
+                    # Último intento fallido
+                    return {
+                        "precio": 0,
+                        "noches": 0,
+                        "detalles": None,
+                        "error": f"Error después de {max_intentos} intentos: {str(e)}"
+                    }
+                
+                # Exponential backoff
+                tiempo_espera = 2 ** intento  # 2s, 4s, 8s
+                self._reportar_progreso(
+                    f"{mensaje_base} - ⏳ Esperando {tiempo_espera}s antes de reintentar...",
+                    progreso_base,
+                    None
+                )
                 logger.info(f"Reintentando en {tiempo_espera}s...")
                 time.sleep(tiempo_espera)
         

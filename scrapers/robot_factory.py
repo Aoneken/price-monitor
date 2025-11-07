@@ -5,6 +5,7 @@ from typing import Dict, Type
 from scrapers.base_robot import BaseRobot
 from scrapers.robots.booking_robot import BookingRobot
 from scrapers.robots.airbnb_robot import AirbnbRobot
+from scrapers.robots.expedia_robot import ExpediaRobot
 
 
 class PlatformNotSupportedError(Exception):
@@ -22,6 +23,7 @@ class RobotFactory:
     _robots: Dict[str, Type[BaseRobot]] = {
         'Booking': BookingRobot,
         'Airbnb': AirbnbRobot,
+        'Expedia': ExpediaRobot,
         # 'Vrbo': VrboRobot,  # Futuro
     }
     
