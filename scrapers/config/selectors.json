@@ -1,16 +1,20 @@
 {
   "Booking": {
     "precio": [
+      "span[data-testid='price-and-discounted-price']",
       "[data-testid='price-and-discounted-price']",
-      "[data-testid='price-label']",
-      ".priceDisplay",
-      "span[aria-label*='price' i]",
-      ".bui-price-display__value"
+      "span.priceDisplay",
+      "div[data-testid='price-summary'] span",
+      ".bui-price-display__value",
+      "span[aria-label*='precio' i]",
+      "span[aria-label*='price' i]"
     ],
     "no_disponible": [
-      "[data-testid='calendar-unavailable']",
       "text=/no disponible/i",
       "text=/not available/i",
+      "text=/totalmente reservado/i",
+      "text=/fully booked/i",
+      "[data-testid='calendar-unavailable']",
       ".not-available-message",
       "[data-testid='soldout']"
     ],
@@ -18,7 +22,8 @@
       "text=/verifica que eres humano/i",
       "text=/confirm you're human/i",
       ".captcha-container",
-      "#challenge-running"
+      "#challenge-running",
+      "iframe[src*='captcha']"
     ],
     "limpieza_incluida": [
       "text=/limpieza incluida/i",
@@ -37,15 +42,19 @@
   "Airbnb": {
     "precio": [
       "span._tyxjp1",
-      "span._1jo4hgw",
-      "div[data-testid='price-breakdown'] span",
-      "._14y1gc",
-      "span[class*='_price']"
+      "div._1jo4hgw",
+      "span._1y74zjx",
+      "div[data-testid='book-it-default'] span",
+      "button[data-testid='book-it-default'] span",
+      "span[class*='_price']",
+      "div._1qs94rc span"
     ],
     "no_disponible": [
-      "text=/no está disponible para estas fechas/i",
-      "text=/not available for these dates/i",
-      "._1r4u6z8",
+      "text=/no está disponible/i",
+      "text=/not available/i",
+      "text=/estas fechas no están disponibles/i",
+      "text=/these dates aren't available/i",
+      "div._1r4u6z8",
       ".unavailable-message",
       "[data-testid='unavailable']"
     ],
@@ -54,7 +63,8 @@
       "text=/confirm you're not a robot/i",
       "#recaptcha",
       ".challenge-form",
-      "[data-testid='captcha']"
+      "[data-testid='captcha']",
+      "iframe[src*='recaptcha']"
     ],
     "limpieza_incluida": [
       "text=/tarifa de limpieza/i",

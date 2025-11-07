@@ -12,6 +12,7 @@ class URLBuilder:
     def booking_url(url_base: str, fecha_checkin: datetime, noches: int) -> str:
         """
         Construye URL de Booking.com con parámetros de búsqueda.
+        Método simplificado que funciona mejor - basado en código de rama main.
         
         Args:
             url_base: URL base del hotel en Booking
@@ -27,34 +28,22 @@ class URLBuilder:
         """
         fecha_checkout = fecha_checkin + timedelta(days=noches)
         
-        # Parse URL
-        parsed = urlparse(url_base)
-        params = parse_qs(parsed.query)
+        # Método simple que funciona: agregar parámetros directamente
+        checkin_str = fecha_checkin.strftime('%Y-%m-%d')
+        checkout_str = fecha_checkout.strftime('%Y-%m-%d')
         
-        # Agregar parámetros de fecha
-        params['checkin'] = [fecha_checkin.strftime('%Y-%m-%d')]
-        params['checkout'] = [fecha_checkout.strftime('%Y-%m-%d')]
-        params['group_adults'] = ['2']  # Asume 2 adultos
-        params['no_rooms'] = ['1']
-        params['group_children'] = ['0']
+        # Si la URL ya tiene parámetros, agregar con &, sino con ?
+        separador = '&' if '?' in url_base else '?'
         
-        # Reconstruir URL
-        nueva_query = urlencode(params, doseq=True)
-        nueva_url = urlunparse((
-            parsed.scheme,
-            parsed.netloc,
-            parsed.path,
-            parsed.params,
-            nueva_query,
-            parsed.fragment
-        ))
+        url_final = f"{url_base}{separador}checkin={checkin_str}&checkout={checkout_str}&group_adults=2&no_rooms=1&group_children=0"
         
-        return nueva_url
+        return url_final
     
     @staticmethod
     def airbnb_url(url_base: str, fecha_checkin: datetime, noches: int) -> str:
         """
         Construye URL de Airbnb con parámetros de búsqueda.
+        Método simplificado que funciona mejor - basado en código de rama main.
         
         Args:
             url_base: URL base del listado en Airbnb
@@ -70,27 +59,16 @@ class URLBuilder:
         """
         fecha_checkout = fecha_checkin + timedelta(days=noches)
         
-        parsed = urlparse(url_base)
-        params = parse_qs(parsed.query)
+        # Método simple que funciona
+        checkin_str = fecha_checkin.strftime('%Y-%m-%d')
+        checkout_str = fecha_checkout.strftime('%Y-%m-%d')
         
-        # Parámetros de Airbnb
-        params['check_in'] = [fecha_checkin.strftime('%Y-%m-%d')]
-        params['check_out'] = [fecha_checkout.strftime('%Y-%m-%d')]
-        params['adults'] = ['2']
-        params['children'] = ['0']
-        params['infants'] = ['0']
+        # Si la URL ya tiene parámetros, agregar con &, sino con ?
+        separador = '&' if '?' in url_base else '?'
         
-        nueva_query = urlencode(params, doseq=True)
-        nueva_url = urlunparse((
-            parsed.scheme,
-            parsed.netloc,
-            parsed.path,
-            parsed.params,
-            nueva_query,
-            parsed.fragment
-        ))
+        url_final = f"{url_base}{separador}check_in={checkin_str}&check_out={checkout_str}&adults=2"
         
-        return nueva_url
+        return url_final
     
     @staticmethod
     def vrbo_url(url_base: str, fecha_checkin: datetime, noches: int) -> str:

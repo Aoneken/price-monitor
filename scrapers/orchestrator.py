@@ -6,16 +6,25 @@ import logging
 from datetime import datetime
 from typing import List, Dict, Callable, Optional
 from dataclasses import dataclass
+from pathlib import Path
 
 from scrapers.robot_factory import RobotFactory, PlatformNotSupportedError
 from scrapers.utils.stealth import configurar_navegador_stealth
 from scrapers.utils.retry import esperar_aleatorio, retry_con_backoff
 from database.db_manager import get_db
 
-# Configurar logging
+# Configurar logging con archivo
+log_dir = Path(__file__).parent.parent / 'logs'
+log_dir.mkdir(exist_ok=True)
+log_file = log_dir / 'scraping.log'
+
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file, encoding='utf-8'),
+        logging.StreamHandler()
+    ]
 )
 logger = logging.getLogger(__name__)
 
