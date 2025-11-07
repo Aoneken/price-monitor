@@ -1,3 +1,23 @@
-# Requerimientos mínimos para V3 (Skeleton)
+# Core Framework
 streamlit==1.29.0
 python-dotenv==1.0.0
+
+# Scraping & Automation
+playwright==1.48.0
+beautifulsoup4==4.12.3
+lxml==5.1.0
+
+# Testing
+pytest==8.4.2
+pytest-asyncio==0.23.7
+
+# Data & Database
+pandas==2.1.4
+sqlite-utils==3.35
+
+# Utilities
+python-dateutil==2.8.2
+pytz==2024.1
+
+# Async & Performance
+aiohttp==3.9.5
