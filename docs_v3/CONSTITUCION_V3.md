@@ -22,7 +22,8 @@ Todo lo demás es susceptible de rediseño.
 7. Privacidad y cumplimiento: Datos sensibles (credenciales, tokens API) fuera del repo y gestionados por vault / variables de entorno.  
 8. Anti-fragilidad: Se espera rotura de selectores; el sistema prepara mecanismos para actualización remota y fallback.  
 9. Transparencia de datos: Cada dato almacenado debe tener su linaje (origen, timestamp, método).  
-10. Reproducibilidad: Cualquier precio puede regenerarse (o explicar por qué no) a partir de eventos y configuraciones.
+10. Reproducibilidad: Cualquier precio puede regenerarse (o explicar por qué no) a partir de eventos y configuraciones.  
+11. Memoria histórica: Los errores y diagnósticos previos (V1/V2) se preservan explícitamente para evitar regresiones (ver `LECCIONES_ERRORES_V1_V2.md`).
 
 ## 5. Objetivos Estratégicos V3
 - Separar scraping, persistencia y analítica en capas desacopladas.  
@@ -102,7 +103,7 @@ Cualquier modificación a esta constitución requiere:
 - Tag de versión menor (v3.x) si no cambia modelo de datos; mayor si lo altera.  
 
 ## 14. Entrada en Vigencia
-Se considera activa al merge de la rama de implementación V3 en `main` y creación de tag `v3.0.0`.
+Se considera activa al merge de la rama de implementación V3 en `main` y creación de tag `v3.0.0`. Documentos complementarios obligatorios: `ARQUITECTURA_V3.md`, `DATOS_BD_V3.md`, `LECCIONES_ERRORES_V1_V2.md`.
 
 ---
 Fin del documento constitucional V3.

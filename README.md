@@ -1,6 +1,11 @@
 # 📊 Price Monitor
 
-> Nota: La documentación constitucional para la Versión 3 (V3) está disponible en `docs_v3/`. Esta nueva documentación define la arquitectura y contratos para reconstruir la app desde cero, manteniendo la tabla de Establecimientos como invariantes del dominio.
+Estado V3 (rama `v3`): Skeleton mínimo activado.
+
+- Núcleo conservado: Solo la tabla `Establecimientos` (schema mínimo en `database/schema.sql`).
+- Documentación constitucional: ver `docs_v3/` (arquitectura, dominio, contratos y migración).
+- Código V1/V2 reubicado en `legacy/` para referencia histórica y comparativa.
+- A partir de aquí, se reconstruirá la app conforme a los contratos definidos en V3.
 
 Documentación V3 (índice):
 - `docs_v3/CONSTITUCION_V3.md`
@@ -34,6 +39,8 @@ Price Monitor es una aplicación web interna que permite gestionar un portafolio
 
 ## 🏗️ Arquitectura
 
+Nota: La arquitectura detallada a continuación corresponde al legado V1/V2. El diseño vigente para V3 está en `docs_v3/ARQUITECTURA_V3.md`. La implementación V3 se irá incorporando gradualmente.
+
 ### Stack Tecnológico
 
 - **Frontend**: Streamlit (interfaz web interactiva)
@@ -49,38 +56,23 @@ Price Monitor es una aplicación web interna que permite gestionar un portafolio
 - **Singleton**: Gestor único de base de datos
 - **Repository Pattern**: Abstracción de acceso a datos
 
-### Estructura del Proyecto
+### Estructura del Proyecto (Legado en `legacy/`)
 
 ```
 price-monitor/
-├── app.py                          # Punto de entrada de Streamlit
-├── requirements.txt
-├── .env.example
+├── legacy/                         # Código V1/V2 preservado
+│   ├── app.py
+│   ├── scrapers/
+│   ├── pages/
+│   ├── ui/
+│   ├── tests/
+│   └── tests_root/
+├── docs_v3/                        # Constitución y guías V3
 ├── config/
 │   └── settings.py                 # Configuración centralizada
-├── database/
-│   ├── schema.sql                  # DDL con índices
-│   └── db_manager.py               # Gestor de BD con UPSERT
-├── scrapers/
-│   ├── base_robot.py               # Interfaz abstracta
-│   ├── robot_factory.py            # Factory de robots
-│   ├── orchestrator.py             # Orquestador principal
-│   ├── robots/
-│   │   ├── booking_robot.py
-│   │   └── airbnb_robot.py
-│   ├── config/
-│   │   └── selectors.json          # Selectores CSS externos
-│   └── utils/
-│       ├── stealth.py              # Anti-detección
-│       ├── url_builder.py          # Constructor de URLs
-│       └── retry.py                # Lógica de reintentos
-└── ui/
-    └── pages/
-        ├── 1_Establecimientos.py
-        ├── 2_Scraping.py
-        ├── 3_Base_de_Datos.py
-        ├── 4_Dashboard.py
-        └── 5_Analisis.py
+└── database/
+  ├── schema.sql                  # (V3) Solo Establecimientos
+  └── db_manager.py               # (V3) CRUD mínimo
 ```
 
 ---
