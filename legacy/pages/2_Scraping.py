@@ -34,17 +34,56 @@ col_config1, col_config2 = st.columns(2)
 with col_config1:
     establecimiento_seleccionado = st.selectbox(
         "Seleccionar Establecimiento",
-        options=list(nombres_establecimientos.keys())
+        options=list(nombres_establecimientos.keys()),
+        key="selector_establecimiento"
     )
     id_establecimiento = nombres_establecimientos[establecimiento_seleccionado]
     
-    # Verificar URLs activas
+    # Verificar URLs activas (forzar recarga desde BD, sin cache)
     urls_activas = db.get_urls_activas_by_establecimiento(id_establecimiento)
+    
+    # Debug: Mostrar info detallada
+    with st.expander("🔍 Debug: Información de URLs", expanded=False):
+        st.write(f"**ID Establecimiento:** {id_establecimiento}")
+        st.write(f"**Total URLs activas:** {len(urls_activas)}")
+        st.json([{
+            'plataforma': url['plataforma'],
+            'url_truncada': url['url'][:60] + '...',
+            'esta_activa': bool(url['esta_activa'])
+        } for url in urls_activas])
+    
     st.info(f"📊 URLs activas para '{establecimiento_seleccionado}': **{len(urls_activas)}**")
     
-    if urls_activas:
-        for url in urls_activas:
+    # 🆕 SELECTOR DE PLATAFORMAS
+    st.subheader("Plataformas a Scrapear")
+    
+    plataformas_disponibles = sorted(list(set([url['plataforma'] for url in urls_activas])))
+    
+    if len(plataformas_disponibles) > 1:
+        plataformas_seleccionadas = st.multiselect(
+            "Seleccionar Plataforma(s)",
+            options=plataformas_disponibles,
+            default=plataformas_disponibles,  # Por defecto todas
+            help="Puedes seleccionar una o más plataformas para scrapear",
+            key="selector_plataformas"
+        )
+    elif len(plataformas_disponibles) == 1:
+        # Si solo hay una plataforma, no mostrar selector
+        plataformas_seleccionadas = plataformas_disponibles
+        st.info(f"Única plataforma disponible: **{plataformas_disponibles[0]}**")
+    else:
+        plataformas_seleccionadas = []
+        st.error("⚠️ No hay plataformas activas para este establecimiento")
+    
+    # Filtrar URLs según plataformas seleccionadas
+    if plataformas_seleccionadas:
+        urls_a_scrapear = [url for url in urls_activas if url['plataforma'] in plataformas_seleccionadas]
+        st.success(f"✅ {len(urls_a_scrapear)} URL(s) seleccionada(s) para scraping")
+        for url in urls_a_scrapear:
             st.caption(f"• {url['plataforma']}")
+    else:
+        urls_a_scrapear = []
+        st.warning("⚠️ No has seleccionado ninguna plataforma")
 
 with col_config2:
     # Selector de rango de fechas
@@ -74,6 +113,10 @@ st.divider()
 # === SECCIÓN 2: EJECUCIÓN Y PROGRESO ===
 if not urls_activas:
     st.error("❌ No hay URLs activas para este establecimiento. Agrega URLs en la pestaña 'Establecimientos'.")
+    st.stop()
+
+if not plataformas_seleccionadas or not urls_a_scrapear:
+    st.warning("⚠️ Debes seleccionar al menos una plataforma para iniciar el scraping.")
     st.stop()
 
 if fecha_fin < fecha_inicio:
@@ -205,10 +248,12 @@ if iniciar_scraping:
         fecha_inicio_dt = datetime.combine(fecha_inicio, datetime.min.time())
         fecha_fin_dt = datetime.combine(fecha_fin, datetime.min.time())
         
+        # 🆕 PASAR PLATAFORMAS SELECCIONADAS AL ORCHESTRATOR
         resultados = orchestrator.ejecutar(
             id_establecimiento,
             fecha_inicio_dt,
-            fecha_fin_dt
+            fecha_fin_dt,
+            plataformas_filtro=plataformas_seleccionadas  # <-- Nuevo parámetro
         )
         
         # Mostrar resumen final

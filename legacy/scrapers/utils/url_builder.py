@@ -42,33 +42,33 @@ class URLBuilder:
     @staticmethod
     def airbnb_url(url_base: str, fecha_checkin: datetime, noches: int) -> str:
         """
-        Construye URL de Airbnb con parámetros de búsqueda.
-        Método simplificado que funciona mejor - basado en código de rama main.
-        
-        Args:
-            url_base: URL base del listado en Airbnb
-            fecha_checkin: Fecha de check-in
-            noches: Número de noches
-            
-        Returns:
-            URL completa con parámetros
-            
-        Ejemplo:
-            Input: https://www.airbnb.com/rooms/12345678
-            Output: https://www.airbnb.com/rooms/12345678?check_in=2025-12-01&check_out=2025-12-04
+        Construye URL principal de Airbnb usando el formato comprobado.
+        Fuerza moneda USD y parámetros mínimos.
         """
         fecha_checkout = fecha_checkin + timedelta(days=noches)
-        
-        # Método simple que funciona
         checkin_str = fecha_checkin.strftime('%Y-%m-%d')
         checkout_str = fecha_checkout.strftime('%Y-%m-%d')
-        
-        # Si la URL ya tiene parámetros, agregar con &, sino con ?
         separador = '&' if '?' in url_base else '?'
-        
-        url_final = f"{url_base}{separador}check_in={checkin_str}&check_out={checkout_str}&adults=2"
-        
-        return url_final
+        return (
+            f"{url_base}{separador}check_in={checkin_str}"
+            f"&check_out={checkout_str}&adults=2&currency=USD"
+        )
+
+    @staticmethod
+    def airbnb_url_variants(url_base: str, fecha_checkin: datetime, noches: int) -> list[str]:
+        """
+        Retorna lista de URLs alternativas (principal + fallback) para Airbnb."""
+        url_principal = URLBuilder.airbnb_url(url_base, fecha_checkin, noches)
+        # Para fallback añadimos parámetros extra que vimos funcionar en pruebas manuales
+        separador = '&' if '?' in url_base else '?'
+        fecha_checkout = fecha_checkin + timedelta(days=noches)
+        checkin_str = fecha_checkin.strftime('%Y-%m-%d')
+        checkout_str = fecha_checkout.strftime('%Y-%m-%d')
+        url_fallback = (
+            f"{url_base}{separador}check_in={checkin_str}&check_out={checkout_str}"
+            "&adults=2&children=0&infants=0&source_impression_id=p3_test&currency=USD"
+        )
+        return [url_principal, url_fallback]
     
     @staticmethod
     def vrbo_url(url_base: str, fecha_checkin: datetime, noches: int) -> str:

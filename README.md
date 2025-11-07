@@ -1,5 +1,20 @@
 # 📊 Price Monitor
 
+> Nota: La documentación constitucional para la Versión 3 (V3) está disponible en `docs_v3/`. Esta nueva documentación define la arquitectura y contratos para reconstruir la app desde cero, manteniendo la tabla de Establecimientos como invariantes del dominio.
+
+Documentación V3 (índice):
+- `docs_v3/CONSTITUCION_V3.md`
+- `docs_v3/ARQUITECTURA_V3.md`
+- `docs_v3/DOMINIO_V3.md`
+- `docs_v3/DATOS_BD_V3.md`
+- `docs_v3/SCRAPING_V3.md`
+- `docs_v3/UI_V3.md`
+- `docs_v3/CONTRATOS_INTERFACES_V3.md`
+- `docs_v3/TESTING_CALIDAD_V3.md`
+- `docs_v3/SEGURIDAD_CUMPLIMIENTO_V3.md`
+- `docs_v3/MIGRACION_V1_A_V3.md`
+- `docs_v3/VERSIONAMIENTO.md`
+
 **Sistema de Inteligencia de Precios para Plataformas de Alojamiento**
 
 Price Monitor es una aplicación web interna que permite gestionar un portafolio de establecimientos, automatizar el scraping de precios en plataformas como Booking y Airbnb, y visualizar insights de pricing y ocupación.

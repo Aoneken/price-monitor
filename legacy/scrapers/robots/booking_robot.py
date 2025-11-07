@@ -61,8 +61,8 @@ class BookingRobot(BaseRobot):
                 logger.info(f"[Booking] Navegando a URL...")
                 page.goto(url_busqueda, wait_until='networkidle', timeout=60000)
                 
-                # Esperar más tiempo para que cargue JavaScript
-                page.wait_for_timeout(5000)
+                # OPTIMIZADO: Reducido de 5s → 2s
+                page.wait_for_timeout(2000)
                 
                 # Detectar bloqueo/CAPTCHA
                 if self.detectar_bloqueo(page):

@@ -62,7 +62,8 @@ class ScrapingOrchestrator:
         self,
         id_establecimiento: int,
         fecha_inicio: datetime,
-        fecha_fin: datetime
+        fecha_fin: datetime,
+        plataformas_filtro: Optional[List[str]] = None
     ) -> List[ResultadoScraping]:
         """
         Ejecuta el proceso completo de scraping para un establecimiento.
@@ -71,6 +72,8 @@ class ScrapingOrchestrator:
             id_establecimiento: ID del establecimiento a scrapear
             fecha_inicio: Fecha de inicio del rango
             fecha_fin: Fecha de fin del rango
+            plataformas_filtro: Lista opcional de plataformas a scrapear (ej: ["Airbnb", "Booking"])
+                               Si es None, scrapea todas las URLs activas
             
         Returns:
             Lista de resultados del scraping
@@ -78,6 +81,8 @@ class ScrapingOrchestrator:
         logger.info(f"=== INICIANDO SCRAPING ===")
         logger.info(f"Establecimiento ID: {id_establecimiento}")
         logger.info(f"Rango: {fecha_inicio.date()} a {fecha_fin.date()}")
+        if plataformas_filtro:
+            logger.info(f"Plataformas seleccionadas: {', '.join(plataformas_filtro)}")
         
         self.resultados = []
         
@@ -88,6 +93,14 @@ class ScrapingOrchestrator:
             logger.warning("No hay URLs activas para scrapear")
             self._reportar_progreso("No hay URLs activas", 1.0, None)
             return []
+        
+        # 🆕 FILTRAR POR PLATAFORMAS SI SE ESPECIFICÓ
+        if plataformas_filtro:
+            urls_activas = [url for url in urls_activas if url['plataforma'] in plataformas_filtro]
+            if not urls_activas:
+                logger.warning(f"No hay URLs activas para las plataformas: {plataformas_filtro}")
+                self._reportar_progreso("No hay URLs para las plataformas seleccionadas", 1.0, None)
+                return []
         
         logger.info(f"URLs activas encontradas: {len(urls_activas)}")
         
@@ -326,31 +339,51 @@ class ScrapingOrchestrator:
     ):
         """
         Guarda el resultado en la base de datos y en la lista de resultados.
+        
+        IMPORTANTE: Si se encontró precio para N noches, se guardan registros
+        para TODAS las fechas del período (fecha hasta fecha+N días).
+        Esto refleja correctamente la disponibilidad: si hay precio para 2 noches
+        a partir del 7 de nov, significa que el 7 Y el 8 están disponibles.
         """
+        from datetime import timedelta
+        
         # Extraer datos del resultado
         precio = resultado_scrape.get('precio', 0)
         noches = resultado_scrape.get('noches', 0)
         detalles = resultado_scrape.get('detalles', {})
         error = resultado_scrape.get('error')
         
-        # Guardar en BD usando UPSERT
-        try:
-            self.db.upsert_precio(
-                id_plataforma_url=id_plataforma_url,
-                fecha_noche=fecha,
-                precio_base=precio,
-                noches_encontradas=noches,
-                incluye_limpieza=detalles.get('limpieza', 'No Informa') if detalles else 'No Informa',
-                incluye_impuestos=detalles.get('impuestos', 'No Informa') if detalles else 'No Informa',
-                ofrece_desayuno=detalles.get('desayuno', 'No Informa') if detalles else 'No Informa',
-                error_log=error
-            )
-            logger.info(f"✓ Guardado: {fecha.date()} - Precio: ${precio:.2f} (Noches: {noches})")
-            
-        except Exception as e:
-            logger.error(f"Error guardando en BD: {e}")
+        # Determinar cuántas fechas guardar
+        if noches > 0 and precio > 0:
+            # CASO 1: Se encontró precio para N noches
+            # Guardar registro para cada noche del período
+            fechas_a_guardar = [fecha + timedelta(days=i) for i in range(noches)]
+            logger.info(f"✓ Precio encontrado: ${precio:.2f}/noche para {noches} noche(s)")
+            logger.info(f"  Guardando disponibilidad para fechas: {[f.date() for f in fechas_a_guardar]}")
+        else:
+            # CASO 2: No hay precio (no disponible o error)
+            # Solo guardar la fecha consultada
+            fechas_a_guardar = [fecha]
         
-        # Crear resultado estructurado
+        # Guardar en BD para cada fecha del período
+        for fecha_guardar in fechas_a_guardar:
+            try:
+                self.db.upsert_precio(
+                    id_plataforma_url=id_plataforma_url,
+                    fecha_noche=fecha_guardar,
+                    precio_base=precio,
+                    noches_encontradas=noches,
+                    incluye_limpieza=detalles.get('limpieza', 'No Informa') if detalles else 'No Informa',
+                    incluye_impuestos=detalles.get('impuestos', 'No Informa') if detalles else 'No Informa',
+                    ofrece_desayuno=detalles.get('desayuno', 'No Informa') if detalles else 'No Informa',
+                    error_log=error
+                )
+                logger.debug(f"  ✓ Guardado: {fecha_guardar.date()} - Precio: ${precio:.2f} (Noches: {noches})")
+                
+            except Exception as e:
+                logger.error(f"  ✗ Error guardando {fecha_guardar.date()} en BD: {e}")
+        
+        # Crear resultado estructurado (solo para la fecha original de consulta)
         resultado = ResultadoScraping(
             id_plataforma_url=id_plataforma_url,
             plataforma=plataforma,

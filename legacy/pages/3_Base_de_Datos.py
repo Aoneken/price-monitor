@@ -215,7 +215,60 @@ else:
 st.divider()
 st.header("🗑️ Gestión de Datos")
 
-with st.expander("⚠️ Eliminar Datos de la Base de Datos", expanded=False):
+# Botón rápido para vaciar toda la tabla
+st.subheader("🚨 Acción Rápida: Vaciar Tabla Completa")
+
+col_vaciar1, col_vaciar2 = st.columns([3, 1])
+
+with col_vaciar1:
+    st.warning("**⚠️ VACIAR TABLA PRECIOS**: Eliminará TODOS los registros de precios, pero mantendrá intactos los Establecimientos y URLs de plataformas.")
+    confirmacion_vaciar = st.text_input(
+        "Escribe 'VACIAR TODO' para confirmar:",
+        key="confirmacion_vaciar_todo",
+        help="Debes escribir exactamente 'VACIAR TODO' en mayúsculas"
+    )
+
+with col_vaciar2:
+    st.write("")
+    st.write("")
+    vaciar_todo_btn = st.button(
+        "🗑️ VACIAR TABLA",
+        type="primary",
+        disabled=(confirmacion_vaciar != "VACIAR TODO"),
+        use_container_width=True,
+        help="Elimina TODOS los registros de la tabla Precios"
+    )
+
+if vaciar_todo_btn and confirmacion_vaciar == "VACIAR TODO":
+    try:
+        with st.spinner("Vaciando tabla Precios..."):
+            # Contar antes de eliminar
+            count_antes = db.count_all_precios()
+            
+            # Vaciar tabla
+            db.truncate_precios()
+            
+            # Verificar
+            count_despues = db.count_all_precios()
+        
+        st.success(f"✅ Tabla Precios vaciada exitosamente. Se eliminaron **{count_antes}** registros.")
+        st.info(f"📊 Registros restantes: {count_despues}")
+        
+        # Limpiar confirmación
+        if 'confirmacion_vaciar_todo' in st.session_state:
+            del st.session_state['confirmacion_vaciar_todo']
+        
+        # Recomendar recargar
+        st.balloons()
+        st.info("💡 Haz clic en 'Buscar en BBDD' nuevamente para confirmar que la tabla está vacía")
+    
+    except Exception as e:
+        st.error(f"❌ Error al vaciar tabla: {e}")
+        st.exception(e)
+
+st.divider()
+
+with st.expander("⚠️ Eliminar Datos de la Base de Datos (Filtros Avanzados)", expanded=False):
     st.warning("**ATENCIÓN**: Esta acción es irreversible. Los datos eliminados no se pueden recuperar.")
     
     st.subheader("Configurar Eliminación")
