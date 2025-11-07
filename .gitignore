@@ -55,9 +55,28 @@ Thumbs.db
 
 # Screenshots (from scraping errors)
 screenshots/
+debug_screenshots/
 *.png
+
+# Debug files
+debug/*.html
+debug/*.json
+debug_*.py
+
+# Cache
+.pytest_cache/
+.cache/
+*.pyc
 
 # Temporary files
 tmp/
 temp/
 *.tmp
+
+# Playwright
+.playwright/
+
+# Coverage
+.coverage
+htmlcov/
+coverage.xml
