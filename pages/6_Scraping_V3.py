@@ -6,11 +6,13 @@ import streamlit as st
 from datetime import date, timedelta
 import sys
 from pathlib import Path
+import pandas as pd
+import time
 
 # Agregar root al path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from scheduler_v3 import ScraperScheduler
+from scripts.scheduler_v3 import ScraperScheduler
 from src.persistence.database_adapter import DatabaseAdapter
 
 
@@ -21,6 +23,14 @@ st.set_page_config(
 )
 
 st.title("🤖 Scraping Automático V3")
+
+# Inicializar session_state para persistencia
+if 'scraping_in_progress' not in st.session_state:
+    st.session_state.scraping_in_progress = False
+if 'scraping_results' not in st.session_state:
+    st.session_state.scraping_results = []
+if 'scraping_filters' not in st.session_state:
+    st.session_state.scraping_filters = None
 
 # Configuración en columnas (más compacto)
 col_conf1, col_conf2, col_conf3, col_conf4 = st.columns(4)
@@ -182,85 +192,213 @@ col_btn1, col_btn2, col_btn3 = st.columns(3)
 
 with col_btn1:
     # Botón para scrapear selección
-    if st.button("🚀 Scrapear Pendientes", type="primary", use_container_width=True):
+    if st.button("🚀 Scrapear Pendientes", type="primary", use_container_width=True, disabled=st.session_state.scraping_in_progress):
         if len(urls_to_scrape) == 0:
             st.warning("No hay URLs pendientes")
         else:
-            with st.spinner(f"Scraping {len(urls_to_scrape)} URLs..."):
-                try:
-                    scheduler = ScraperScheduler(cache_hours=cache_hours, headless=headless)
-                    
-                    results = []
-                    success_count = 0
-                    error_count = 0
-                    
-                    progress_bar = st.progress(0)
-                    status_text = st.empty()
-                    
-                    for idx, url_data in enumerate(urls_to_scrape):
-                        status_text.text(f"⏳ {url_data['plataforma']} - {establecimientos_dict.get(url_data['id_establecimiento'], 'N/A')[:20]}")
-                        
-                        result = scheduler.scrape_url(url_data, check_in, check_out)
-                        results.append(result)
-                        
-                        if result['status'] == 'success':
-                            success_count += 1
-                        else:
-                            error_count += 1
-                        
-                        progress_bar.progress((idx + 1) / len(urls_to_scrape))
-                    
-                    status_text.empty()
-                    progress_bar.empty()
-                    
-                    st.success(f"✓ Completado: {success_count} éxitos, {error_count} errores")
-                    
-                    if scheduler.orchestrator:
-                        scheduler.orchestrator.cleanup()
-                
-                except Exception as e:
-                    st.error(f"Error: {e}")
+            # Guardar filtros en session_state
+            st.session_state.scraping_filters = {
+                'check_in': check_in,
+                'check_out': check_out,
+                'platforms': filter_platforms,
+                'establishments': filter_establishments,
+                'establishments_dict': establecimientos_dict
+            }
+            st.session_state.scraping_in_progress = True
+            st.session_state.scraping_results = []
 
 with col_btn2:
     # Forzar re-scraping
-    if st.button("⚡ Forzar Todas", help="Ignora caché", use_container_width=True):
+    if st.button("⚡ Forzar Todas", help="Ignora caché", use_container_width=True, disabled=st.session_state.scraping_in_progress):
         if len(urls_filtered) == 0:
             st.warning("No hay URLs filtradas")
         else:
-            with st.spinner(f"Scraping {len(urls_filtered)} URLs..."):
-                try:
-                    scheduler = ScraperScheduler(cache_hours=0, headless=headless)
-                    
-                    results = []
-                    success_count = 0
-                    
-                    progress_bar = st.progress(0)
-                    
-                    for idx, url_data in enumerate(urls_filtered):
-                        result = scheduler.scrape_url(url_data, check_in, check_out)
-                        if result['status'] == 'success':
-                            success_count += 1
-                        progress_bar.progress((idx + 1) / len(urls_filtered))
-                    
-                    progress_bar.empty()
-                    st.success(f"✓ {success_count}/{len(urls_filtered)} éxitos")
-                    
-                    if scheduler.orchestrator:
-                        scheduler.orchestrator.cleanup()
-                
-                except Exception as e:
-                    st.error(f"Error: {e}")
+            # Guardar filtros y usar todas las URLs filtradas
+            st.session_state.scraping_filters = {
+                'check_in': check_in,
+                'check_out': check_out,
+                'platforms': filter_platforms,
+                'establishments': filter_establishments,
+                'establishments_dict': establecimientos_dict,
+                'force_all': True
+            }
+            st.session_state.scraping_in_progress = True
+            st.session_state.scraping_results = []
 
 with col_btn3:
-    # Ver detalles de selección
-    with st.expander("📋 Ver selección actual"):
-        if urls_to_scrape:
-            for url_data in urls_to_scrape[:10]:  # Máximo 10
-                st.caption(f"• {url_data['plataforma']} - {establecimientos_dict.get(url_data['id_establecimiento'], 'N/A')}")
-            if len(urls_to_scrape) > 10:
-                st.caption(f"... y {len(urls_to_scrape) - 10} más")
+    # Detener scraping o ver selección
+    if st.session_state.scraping_in_progress:
+        if st.button("🛑 Detener", type="secondary", use_container_width=True):
+            st.session_state.scraping_in_progress = False
+            st.rerun()
+    else:
+        # Ver detalles de selección
+        with st.expander("📋 Ver selección actual"):
+            if urls_to_scrape:
+                for url_data in urls_to_scrape[:10]:  # Máximo 10
+                    st.caption(f"• {url_data['plataforma']} - {establecimientos_dict.get(url_data['id_establecimiento'], 'N/A')}")
+                if len(urls_to_scrape) > 10:
+                    st.caption(f"... y {len(urls_to_scrape) - 10} más")
+            else:
+                st.caption("Sin URLs pendientes")
+
+# --- SECCIÓN DE SCRAPING EN PROGRESO Y TABLA DINÁMICA ---
+if st.session_state.scraping_in_progress:
+    st.markdown("---")
+    st.subheader("📊 Scraping en Progreso")
+    
+    # Verificar que scraping_filters no sea None
+    if st.session_state.scraping_filters is None:
+        st.error("Error: Configuración de scraping no encontrada")
+        st.session_state.scraping_in_progress = False
+        st.stop()
+    
+    # Determinar qué URLs scrapear
+    force_all = st.session_state.scraping_filters.get('force_all', False)
+    urls_to_process = urls_filtered if force_all else urls_to_scrape
+    scheduler = ScraperScheduler(cache_hours=0 if force_all else cache_hours, headless=headless)
+    
+    # Contenedores para actualización dinámica
+    progress_container = st.empty()
+    status_container = st.empty()
+    table_container = st.empty()
+    metrics_container = st.empty()
+    
+    try:
+        total_urls = len(urls_to_process)
+        success_count = 0
+        error_count = 0
+        
+        for idx, url_data in enumerate(urls_to_process):
+            # Actualizar progreso
+            progress = (idx + 1) / total_urls
+            progress_container.progress(progress, text=f"Procesando {idx + 1}/{total_urls}")
+            
+            # Mostrar URL actual
+            estab_name = establecimientos_dict.get(url_data['id_establecimiento'], 'N/A')
+            status_container.info(f"⏳ Scraping: {url_data['plataforma']} - {estab_name}")
+            
+            # Ejecutar scraping
+            result = scheduler.scrape_url(url_data, check_in, check_out)
+            
+            # Guardar resultado
+            st.session_state.scraping_results.append({
+                'Establecimiento': estab_name,
+                'Plataforma': url_data['plataforma'],
+                'Estado': '✅ OK' if result['status'] == 'success' else '❌ Error',
+                'Noches': result.get('nights_saved', 0),
+                'Mensaje': result.get('error', 'Éxito') if result['status'] != 'success' else f"{result.get('nights_saved', 0)} precios guardados"
+            })
+            
+            if result['status'] == 'success':
+                success_count += 1
+            else:
+                error_count += 1
+            
+            # Actualizar métricas
+            col_m1, col_m2, col_m3 = metrics_container.columns(3)
+            col_m1.metric("✅ Éxitos", success_count)
+            col_m2.metric("❌ Errores", error_count)
+            col_m3.metric("📊 Total", f"{idx + 1}/{total_urls}")
+            
+            # Actualizar tabla con resultados parciales
+            df_results = pd.DataFrame(st.session_state.scraping_results)
+            table_container.dataframe(df_results, use_container_width=True, hide_index=True)
+            
+            # Pequeña pausa para permitir actualización de UI
+            time.sleep(0.1)
+        
+        # Cleanup
+        if scheduler.orchestrator:
+            scheduler.orchestrator.cleanup()
+        
+        # Finalizar
+        progress_container.empty()
+        status_container.success(f"✅ Scraping completado: {success_count} éxitos, {error_count} errores")
+        
+        # Botón para ver tabla de precios guardados
+        if st.button("📊 Ver Precios Guardados", type="primary"):
+            st.session_state.scraping_in_progress = False
+            st.rerun()
+        
+    except Exception as e:
+        status_container.error(f"❌ Error durante scraping: {e}")
+        st.session_state.scraping_in_progress = False
+
+# --- TABLA DE PRECIOS GUARDADOS (después de scraping o siempre visible) ---
+if not st.session_state.scraping_in_progress:
+    st.markdown("---")
+    st.subheader("💾 Precios Guardados en BD")
+    
+    try:
+        # Obtener precios del periodo y filtros actuales
+        import sqlite3
+        DB_PATH = Path(__file__).parent.parent / "database" / "price_monitor.db"
+        conn = sqlite3.connect(str(DB_PATH))
+        
+        # Query para obtener precios del periodo seleccionado y filtros
+        query = """
+        SELECT 
+            e.nombre_personalizado as Establecimiento,
+            pu.plataforma as Plataforma,
+            p.fecha_noche as Fecha,
+            p.precio_base as Precio,
+            p.esta_ocupado as Ocupado,
+            p.fecha_scrape as 'Última Actualización'
+        FROM Precios p
+        JOIN Plataformas_URL pu ON p.id_plataforma_url = pu.id_plataforma_url
+        JOIN Establecimientos e ON pu.id_establecimiento = e.id_establecimiento
+        WHERE p.fecha_noche BETWEEN ? AND ?
+        """
+        
+        params = [check_in.isoformat(), check_out.isoformat()]
+        
+        # Agregar filtros de plataforma
+        if filter_platforms:
+            placeholders = ','.join(['?' for _ in filter_platforms])
+            query += f" AND pu.plataforma IN ({placeholders})"
+            params.extend(filter_platforms)
+        
+        # Agregar filtros de establecimiento
+        if filter_establishments:
+            placeholders = ','.join(['?' for _ in filter_establishments])
+            query += f" AND pu.id_establecimiento IN ({placeholders})"
+            params.extend(filter_establishments)
+        
+        query += " ORDER BY p.fecha_noche, e.nombre_personalizado, pu.plataforma"
+        
+        df_precios = pd.read_sql_query(query, conn, params=params)
+        conn.close()
+        
+        if not df_precios.empty:
+            # Formatear datos
+            df_precios['Precio'] = df_precios['Precio'].apply(lambda x: f"${x:.2f}" if pd.notna(x) else "-")
+            df_precios['Ocupado'] = df_precios['Ocupado'].map({0: '❌', 1: '✅'})
+            df_precios['Fecha'] = pd.to_datetime(df_precios['Fecha']).dt.strftime('%Y-%m-%d')
+            df_precios['Última Actualización'] = pd.to_datetime(df_precios['Última Actualización']).dt.strftime('%Y-%m-%d %H:%M')
+            
+            # Mostrar tabla con altura fija para evitar parpadeo
+            st.dataframe(df_precios, use_container_width=True, hide_index=True, height=400)
+            
+            # Métricas resumen
+            col_r1, col_r2, col_r3, col_r4 = st.columns(4)
+            col_r1.metric("📊 Total Registros", len(df_precios))
+            col_r2.metric("🏨 Establecimientos", df_precios['Establecimiento'].nunique())
+            col_r3.metric("🏢 Plataformas", df_precios['Plataforma'].nunique())
+            
+            # Calcular precio promedio (solo valores numéricos)
+            precios_numericos = df_precios['Precio'].str.replace('$', '').str.replace(',', '')
+            precios_numericos = pd.to_numeric(precios_numericos, errors='coerce')
+            precio_promedio = precios_numericos.mean()
+            col_r4.metric("💰 Precio Promedio", f"${precio_promedio:.2f}" if not pd.isna(precio_promedio) else "-")
+            
         else:
-            st.caption("Sin URLs pendientes")
+            st.info("No hay precios guardados para el periodo y filtros seleccionados.")
+            st.caption("💡 Ejecuta un scraping para obtener datos.")
+    
+    except Exception as e:
+        st.error(f"Error cargando precios de BD: {e}")
+
 
 # Footer compacto
 st.markdown("---")
