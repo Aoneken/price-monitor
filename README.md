@@ -8,18 +8,14 @@ Estado V3 (rama `v3`): Skeleton mínimo activado.
 - A partir de aquí, se reconstruirá la app conforme a los contratos definidos en V3.
 
 Documentación V3 (índice):
-- `docs_v3/CONSTITUCION_V3.md`
-- `docs_v3/ARQUITECTURA_V3.md`
-- `docs_v3/DOMINIO_V3.md`
-- `docs_v3/DATOS_BD_V3.md`
-- `docs_v3/SCRAPING_V3.md`
-- `docs_v3/UI_V3.md`
-- `docs_v3/CONTRATOS_INTERFACES_V3.md`
-- `docs_v3/TESTING_CALIDAD_V3.md`
-- `docs_v3/SEGURIDAD_CUMPLIMIENTO_V3.md`
-- `docs_v3/MIGRACION_V1_A_V3.md`
-- `docs_v3/VERSIONAMIENTO.md`
- - `docs_v3/LECCIONES_ERRORES_V1_V2.md`
+- `docs_v3/VISION_NEGOCIO_V3.md`
+- `docs_v3/FASE_0_CONSTITUCION_Y_MIGRACION.md`
+- `docs_v3/FASE_1_DATOS_Y_DOMINIO.md`
+- `docs_v3/FASE_2_INGESTA_Y_SCRAPING.md`
+- `docs_v3/FASE_3_PERSISTENCIA_Y_NORMALIZACION.md`
+- `docs_v3/FASE_4_OBSERVABILIDAD_Y_TESTING.md`
+- `docs_v3/FASE_5_UI_Y_API.md`
+- `docs_v3/FASE_6_SEGURIDAD_Y_OPERACION.md`
 
 **Sistema de Inteligencia de Precios para Plataformas de Alojamiento**
 
