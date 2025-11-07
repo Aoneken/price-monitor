@@ -247,18 +247,21 @@ class DatabaseAdapter:
             - url
             - plataforma
             - id_establecimiento
+            - nombre_establecimiento
         """
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
                 SELECT 
-                    id_plataforma_url,
-                    url,
-                    plataforma,
-                    id_establecimiento
-                FROM Plataformas_URL
-                WHERE esta_activa = TRUE
-                ORDER BY plataforma, id_establecimiento
+                    p.id_plataforma_url,
+                    p.url,
+                    p.plataforma,
+                    p.id_establecimiento,
+                    e.nombre_personalizado as nombre_establecimiento
+                FROM Plataformas_URL p
+                JOIN Establecimientos e ON p.id_establecimiento = e.id_establecimiento
+                WHERE p.esta_activa = TRUE
+                ORDER BY p.plataforma, p.id_establecimiento
             """)
             
             return [dict(row) for row in cursor.fetchall()]

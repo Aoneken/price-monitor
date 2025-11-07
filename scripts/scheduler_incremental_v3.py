@@ -81,7 +81,7 @@ class IncrementalScraperScheduler:
         Intenta scrapear con N noches.
         
         Args:
-            url_data: Dict con url, plataforma, id_plataforma_url
+            url_data: Dict con url, plataforma, id_plataforma_url, nombre_establecimiento
             fecha_inicial: Fecha de check-in
             nights: Número de noches (3, 2, o 1)
         
@@ -91,11 +91,12 @@ class IncrementalScraperScheduler:
         url = url_data['url']
         platform = url_data['plataforma'].lower()
         url_id = url_data['id_plataforma_url']
+        nombre = url_data.get('nombre_establecimiento', f'URL {url_id}')
         
         check_in = fecha_inicial
         check_out = fecha_inicial + timedelta(days=nights)
         
-        logger.info(f"  Intentando {nights} noches: {check_in} → {check_out}")
+        logger.info(f"  [{nombre} - {url_data['plataforma']}] Intentando {nights} noches: {check_in} → {check_out}")
         
         try:
             self._init_orchestrator()
@@ -114,17 +115,17 @@ class IncrementalScraperScheduler:
                 # Verificar que el precio es válido
                 precio_por_noche = quote.get('precio_por_noche', 0)
                 if precio_por_noche > 0:
-                    logger.info(f"  ✓ {nights} noches: ${precio_por_noche}/noche (total: ${precio_por_noche * nights})")
+                    logger.info(f"  [{nombre}] ✓ {nights} noches: ${precio_por_noche}/noche (total: ${precio_por_noche * nights})")
                     return quote
                 else:
-                    logger.warning(f"  ✗ {nights} noches: precio inválido o 0")
+                    logger.warning(f"  [{nombre}] ✗ {nights} noches: precio inválido o 0")
                     return None
             else:
-                logger.warning(f"  ✗ {nights} noches: {result.get('error', 'error desconocido')}")
+                logger.warning(f"  [{nombre}] ✗ {nights} noches: {result.get('error', 'error desconocido')}")
                 return None
         
         except Exception as e:
-            logger.error(f"  ✗ {nights} noches: {str(e)}")
+            logger.error(f"  [{nombre}] ✗ {nights} noches: {str(e)}")
             return None
     
     def normalize_and_save_prices(
@@ -210,35 +211,36 @@ class IncrementalScraperScheduler:
             - status: 'cached', 'success_3', 'success_2', 'success_1', 'occupied'
         """
         url_id = url_data['id_plataforma_url']
+        nombre = url_data.get('nombre_establecimiento', f'URL {url_id}')
         
         # PASO 0: Verificar caché
         if not self.db_adapter.should_scrape_date(url_id, fecha_inicial, self.cache_hours):
-            logger.info(f"  ⊙ Fecha {fecha_inicial}: en caché, omitiendo")
+            logger.info(f"  [{nombre}] ⊙ Fecha {fecha_inicial}: en caché, omitiendo")
             return (1, 'cached')
         
         # PASO 1: Intentar 3 noches
         quote_3 = self.try_scrape_nights(url_data, fecha_inicial, nights=3)
         if quote_3:
             saved = self.normalize_and_save_prices(url_id, fecha_inicial, quote_3, nights=3)
-            logger.info(f"  ✓ 3 noches guardadas ({saved}/3)")
+            logger.info(f"  [{nombre}] ✓ 3 noches guardadas ({saved}/3)")
             return (3, 'success_3')
         
         # PASO 2: Intentar 2 noches
         quote_2 = self.try_scrape_nights(url_data, fecha_inicial, nights=2)
         if quote_2:
             saved = self.normalize_and_save_prices(url_id, fecha_inicial, quote_2, nights=2)
-            logger.info(f"  ✓ 2 noches guardadas ({saved}/2)")
+            logger.info(f"  [{nombre}] ✓ 2 noches guardadas ({saved}/2)")
             return (2, 'success_2')
         
         # PASO 3: Intentar 1 noche
         quote_1 = self.try_scrape_nights(url_data, fecha_inicial, nights=1)
         if quote_1:
             saved = self.normalize_and_save_prices(url_id, fecha_inicial, quote_1, nights=1)
-            logger.info(f"  ✓ 1 noche guardada ({saved}/1)")
+            logger.info(f"  [{nombre}] ✓ 1 noche guardada ({saved}/1)")
             return (1, 'success_1')
         
         # PASO 4: Marcar como OCUPADO
-        logger.info(f"  🔒 Todas las búsquedas fallaron → Marcando como OCUPADO")
+        logger.info(f"  [{nombre}] 🔒 Todas las búsquedas fallaron → Marcando como OCUPADO")
         self.db_adapter.mark_date_occupied(
             url_id=url_id,
             fecha_noche=fecha_inicial,
@@ -275,9 +277,10 @@ class IncrementalScraperScheduler:
         """
         platform = url_data['plataforma']
         url_id = url_data['id_plataforma_url']
+        nombre = url_data.get('nombre_establecimiento', f'URL {url_id}')
         
         logger.info(f"\n{'='*60}")
-        logger.info(f"Scraping {platform} URL {url_id}")
+        logger.info(f"📍 {nombre} - {platform} (URL {url_id})")
         logger.info(f"Rango: {start_date} → {end_date}")
         logger.info(f"{'='*60}")
         
@@ -316,7 +319,7 @@ class IncrementalScraperScheduler:
         
         # Resumen
         logger.info(f"\n{'='*60}")
-        logger.info(f"RESUMEN - {platform} URL {url_id}")
+        logger.info(f"RESUMEN - {nombre} ({platform})")
         logger.info(f"{'='*60}")
         logger.info(f"Fechas totales:     {stats['total_dates']}")
         logger.info(f"En caché:           {stats['cached']}")
