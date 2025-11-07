@@ -1,4 +1,219 @@
-# 📊 Price Monitor
+# 📊 Price Monitor V3
+
+> **⚠️ IMPORTANTE**: Este proyecto está en la rama `v3` con implementación completa del SDK V3.  
+> Para documentación completa, ver **[README_V3.md](README_V3.md)**
+
+## 🚀 Inicio Rápido
+
+```bash
+# Instalar dependencias
+pip install -r requirements.txt
+playwright install chromium
+
+# Iniciar aplicación
+streamlit run app.py
+
+# Ejecutar scraping automático
+python scheduler_v3.py --help
+```
+
+---
+
+## ✨ Novedades V3
+
+### SDK Completo
+- ✅ **Parsers modulares** por plataforma (Airbnb, Booking, Expedia)
+- ✅ **Robots con Playwright** y configuración stealth
+- ✅ **Normalizers** para datos multi-divisa y validación
+- ✅ **Orchestrator** para coordinación multi-plataforma
+- ✅ **Quality scoring** (0-1) por confiabilidad de fuente
+
+### Aplicación Web
+- ✅ **Scraping V3**: UI para scraping manual con configuración flexible
+- ✅ **Monitoreo V3**: Dashboard con métricas en tiempo real
+- ✅ **Sistema de caché**: Evita re-scraping innecesario (24h default)
+- ✅ **Logging completo**: logs/scheduler_v3.log
+
+### Automatización
+- ✅ **Scheduler CLI**: Ejecución batch desde terminal
+- ✅ **Integración con BD**: Mapeo automático a schema legacy
+- ✅ **Filtrado por plataforma**: Scraping selectivo
+- ✅ **Tests unitarios**: 26 tests, 100% passing
+
+---
+
+## 📁 Documentación
+
+### Para Usuarios
+- **[README_V3.md](README_V3.md)**: Guía completa de uso
+- **[SDK_V3_README.md](SDK_V3_README.md)**: Documentación del SDK
+
+### Para Desarrolladores
+- **[IMPLEMENTACION_SDK_V3_COMPLETA.md](IMPLEMENTACION_SDK_V3_COMPLETA.md)**: Resumen técnico
+- **docs_v3/metodologias/**: Metodologías por plataforma
+- **tests_v3/**: Suite de tests unitarios
+
+---
+
+## 🎯 Estado del Proyecto
+
+**Versión**: 3.0.0  
+**Branch**: v3  
+**Status**: ✅ **Producción Ready**
+
+### Completado
+- [x] SDK V3 con parsers, robots, normalizers
+- [x] Integración completa con base de datos
+- [x] UI Streamlit funcional (Scraping + Monitoreo)
+- [x] Scheduler CLI con logging
+- [x] Sistema de caché inteligente
+- [x] Tests unitarios (26 tests, 100% passing)
+
+### En Progreso
+- [ ] Tests de integración con fixtures HTML
+- [ ] Validación con URLs reales de producción
+
+### Roadmap
+- [ ] Scraping concurrente (asyncio)
+- [ ] Alertas de cambios de precio
+- [ ] API REST
+- [ ] Soporte para más plataformas
+
+---
+
+## 🏗️ Arquitectura V3
+
+```
+src/
+├── parsers/          # Extracción de datos HTML
+├── robots/           # Navegación Playwright
+├── normalizers/      # Normalización y validación
+├── persistence/      # Integración con BD
+└── orchestrator_v3   # Coordinador multi-plataforma
+```
+
+**Flujo de Datos**:
+```
+URL + Fechas → Robot (Playwright) → HTML → Parser → Normalizer → Quote → BD
+```
+
+---
+
+## 📊 Características Principales (V3)
+
+### 🤖 Scraping Inteligente
+- **3 plataformas**: Airbnb, Booking, Expedia
+- **Playwright**: Navegación robusta y stealth
+- **Quality scoring**: Confiabilidad 0-1 por fuente
+- **Manejo de errores**: Códigos específicos por plataforma
+
+### 📈 Monitoreo en Tiempo Real
+- **Métricas generales**: Total precios, actividad 24h, cobertura
+- **Distribución**: URLs con datos por plataforma
+- **Actividad reciente**: 50 últimos scrapeos con estado
+- **Tendencias**: Gráficos históricos 30 días
+
+### 🗄️ Base de Datos
+- **SQLite** optimizado con índices
+- **Caché inteligente**: Configurable (default 24h)
+- **Histórico completo**: Precios por noche
+- **Tracking de errores**: Para diagnóstico
+
+---
+
+## 🚀 Uso Rápido
+
+### Interfaz Web
+```bash
+streamlit run app.py
+```
+Ir a:
+- **"Scraping V3"**: Ejecutar scraping manual
+- **"Monitoreo V3"**: Ver métricas y tendencias
+
+### CLI (Automatización)
+```bash
+# Scrapear todas las URLs
+python scheduler_v3.py
+
+# Solo una plataforma
+python scheduler_v3.py --platform Airbnb
+
+# Configuración personalizada
+python scheduler_v3.py --days-ahead 60 --nights 3 --cache-hours 48
+```
+
+### Tests
+```bash
+# Tests unitarios
+pytest tests_v3/ -v
+
+# Demo SDK (sin navegación)
+python demo_v3.py
+
+# Test rápido (1 URL real)
+python test_scheduler_quick.py
+```
+
+---
+
+## 📦 Estructura del Proyecto
+
+```
+price-monitor/
+├── src/                    # SDK V3
+│   ├── parsers/           # Airbnb, Booking, Expedia
+│   ├── robots/            # Navegación Playwright
+│   ├── normalizers/       # Normalización de datos
+│   ├── persistence/       # Integración BD
+│   └── orchestrator_v3.py
+├── pages/                  # UI Streamlit
+│   ├── 6_Scraping_V3.py
+│   └── 7_Monitoreo_V3.py
+├── tests_v3/              # Tests unitarios
+├── database/              # SQLite DB
+├── docs_v3/               # Documentación
+├── logs/                  # Logs de ejecución
+├── scheduler_v3.py        # CLI scheduler
+├── demo_v3.py            # Demo del SDK
+└── app.py                # App principal
+```
+
+---
+
+## 🔧 Tecnologías
+
+- **Python 3.12+**
+- **Streamlit 1.29**: Interfaz web
+- **Playwright 1.48**: Scraping con navegador
+- **SQLite**: Base de datos
+- **Pandas**: Análisis de datos
+- **Pytest**: Testing
+
+---
+
+## 📄 Licencia
+
+MIT License
+
+---
+
+## 📞 Más Información
+
+Ver **[README_V3.md](README_V3.md)** para documentación completa.
+
+---
+
+**Autor**: Aoneken  
+**Última actualización**: 2025-01-08  
+**Branch**: v3  
+**Commits**: Ver `git log --oneline`
+
+---
+
+## Legacy (V1/V2)
+
+El código de versiones anteriores se encuentra en `legacy/` para referencia histórica.
 
 Estado V3 (rama `v3`): Skeleton mínimo activado.
 
@@ -17,13 +232,15 @@ Documentación V3 (índice):
 - `docs_v3/FASE_5_UI_Y_API.md`
 - `docs_v3/FASE_6_SEGURIDAD_Y_OPERACION.md`
 
+---
+
 **Sistema de Inteligencia de Precios para Plataformas de Alojamiento**
 
 Price Monitor es una aplicación web interna que permite gestionar un portafolio de establecimientos, automatizar el scraping de precios en plataformas como Booking y Airbnb, y visualizar insights de pricing y ocupación.
 
 ---
 
-## 🎯 Características Principales
+## 🎯 Características Principales (Legacy)
 
 - **🏠 Gestión de Establecimientos**: CRUD completo para administrar propiedades y URLs de monitoreo
 - **🤖 Scraping Automatizado**: Extracción inteligente de precios con lógica 3→2→1 noches
@@ -34,7 +251,7 @@ Price Monitor es una aplicación web interna que permite gestionar un portafolio
 
 ---
 
-## 🏗️ Arquitectura
+## 🏗️ Arquitectura (Legacy)
 
 Nota: La arquitectura detallada a continuación corresponde al legado V1/V2. El diseño vigente para V3 está en `docs_v3/ARQUITECTURA_V3.md`. La implementación V3 se irá incorporando gradualmente.
 
