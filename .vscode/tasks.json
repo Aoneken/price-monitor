@@ -33,6 +33,30 @@
         "panel": "new"
       },
       "problemMatcher": []
+    },
+    {
+      "label": "run-webapp",
+      "type": "shell",
+      "command": "${config:python.defaultInterpreterPath}",
+      "args": ["run_webapp.py"],
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^$",
+          "file": 1,
+          "location": 2,
+          "message": 3
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Will watch for changes",
+          "endsPattern": "Application startup complete"
+        }
+      }
     }
   ]
 }

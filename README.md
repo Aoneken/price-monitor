@@ -71,11 +71,14 @@ pip install -r requirements-dev.txt
 ## Estructura de salida
 
 ### CSV
+
 Cada archivo contiene:
+
 - Metadatos en comentarios (`#`)
 - Columnas: date, available, availableForCheckin, availableForCheckout, bookable, minNights, maxNights, pricePerNight, priceBasisNights, stayTotal, currency, insertedAt, notes
 
 Ejemplo:
+
 ```csv
 # Listing: Viento de Glaciares
 # Listing ID: 1413234233737891700
@@ -88,7 +91,9 @@ date,available,availableForCheckin,...
 ```
 
 ### JSON (opcional con `--json`)
+
 Array de objetos con las mismas columnas:
+
 ```json
 [
   {
@@ -164,17 +169,21 @@ tests/
 ## Solución de problemas
 
 ### "No module named 'requests'" o similar
+
 ```bash
 .venv/bin/python -m pip install -r requirements.txt
 ```
 
 ### Tests no se ejecutan
+
 ```bash
 .venv/bin/python -m pip install -r requirements-dev.txt
 ```
 
 ### El CSV de establecimientos no se encuentra
+
 Especifica la ruta explícita:
+
 ```bash
 --csv tests/Foco_01/Temp-25-26/establecimientos/establecimientos.csv
 ```

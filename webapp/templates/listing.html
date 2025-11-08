@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ listing.name }} - Price Monitor</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 2rem;
+      }
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+      }
+      header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+      }
+      h1 {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+      }
+      .back-link {
+        color: white;
+        text-decoration: none;
+        display: inline-block;
+        margin-bottom: 1rem;
+        opacity: 0.9;
+      }
+      .back-link:hover {
+        opacity: 1;
+      }
+      .content {
+        padding: 2rem;
+      }
+
+      .date-range-form {
+        background: #f7fafc;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        display: flex;
+        gap: 1rem;
+        align-items: end;
+      }
+      input,
+      button {
+        padding: 0.75rem;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 1rem;
+      }
+      button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      .chart-container {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        border: 2px solid #e2e8f0;
+      }
+      canvas {
+        max-height: 400px;
+      }
+
+      .price-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 2px solid #e2e8f0;
+      }
+      .price-table th {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+      }
+      .price-table td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #e2e8f0;
+      }
+      .price-table tr:hover td {
+        background: #f7fafc;
+      }
+      .badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+      .badge-yes {
+        background: #d1fae5;
+        color: #065f46;
+      }
+      .badge-no {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+      .price-highlight {
+        font-weight: 700;
+        color: #667eea;
+        font-size: 1.1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <a href="/" class="back-link">← Volver a inicio</a>
+        <h1>{{ listing.name }}</h1>
+        <p>ID: {{ listing.listing_id }}</p>
+      </header>
+
+      <div class="content">
+                    <div class="date-range-form">
+                <div>
+                    <label>Fecha inicio:</label>
+                    <input type="date" id="start_date" value="2025-11-01">
+                </div>
+                <div>
+                    <label>Fecha fin:</label>
+                    <input type="date" id="end_date" value="2025-12-31">
+                </div>
+                <button onclick="loadPrices()">Cargar Precios</button>
+            </div>
+
+        <div class="chart-container">
+          <canvas id="priceChart"></canvas>
+        </div>
+
+        <div id="priceTable"></div>
+      </div>
+    </div>
+
+    <script>
+      const listingId = {{ listing.id }};
+      let chart = null;
+
+      async function loadPrices() {
+          const start = document.getElementById('start_date').value;
+          const end = document.getElementById('end_date').value;
+
+          const response = await fetch(`/api/prices/${listingId}?start_date=${start}&end_date=${end}`);
+          const prices = await response.json();
+
+          renderChart(prices);
+          renderTable(prices);
+      }
+
+      function renderChart(prices) {
+          const ctx = document.getElementById('priceChart');
+
+          if (chart) chart.destroy();
+
+          const dates = prices.map(p => p.date);
+          const priceData = prices.map(p => p.price_per_night || null);
+
+          chart = new Chart(ctx, {
+              type: 'line',
+              data: {
+                  labels: dates,
+                  datasets: [{
+                      label: 'Precio por noche (USD)',
+                      data: priceData,
+                      borderColor: '#667eea',
+                      backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                      tension: 0.4,
+                      fill: true
+                  }]
+              },
+              options: {
+                  responsive: true,
+                  maintainAspectRatio: true,
+                  plugins: {
+                      legend: { display: true },
+                      title: {
+                          display: true,
+                          text: 'Evolución de Precios'
+                      }
+                  },
+                  scales: {
+                      y: {
+                          beginAtZero: false,
+                          ticks: {
+                              callback: value => '$' + value.toFixed(2)
+                          }
+                      }
+                  }
+              }
+          });
+      }
+
+      function renderTable(prices) {
+          const table = `
+              <table class="price-table">
+                  <thead>
+                      <tr>
+                          <th>Fecha</th>
+                          <th>Disponible</th>
+                          <th>Check-in</th>
+                          <th>Precio/Noche</th>
+                          <th>Min Noches</th>
+                          <th>Total</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      ${prices.map(p => `
+                          <tr>
+                              <td>${p.date}</td>
+                              <td>${p.available ? '<span class="badge badge-yes">Sí</span>' : '<span class="badge badge-no">No</span>'}</td>
+                              <td>${p.available_for_checkin ? '<span class="badge badge-yes">Sí</span>' : '<span class="badge badge-no">No</span>'}</td>
+                              <td class="price-highlight">${p.price_per_night ? '$' + p.price_per_night.toFixed(2) : '-'}</td>
+                              <td>${p.min_nights || '-'}</td>
+                              <td>${p.stay_total ? '$' + p.stay_total.toFixed(2) : '-'}</td>
+                          </tr>
+                      `).join('')}
+                  </tbody>
+              </table>
+          `;
+          document.getElementById('priceTable').innerHTML = table;
+      }
+
+      // Load initial data
+      loadPrices();
+    </script>
+  </body>
+</html>
