@@ -13,6 +13,7 @@ Construir una aplicación web local para monitorear precios y disponibilidad de 
 - Extensible: añadir nuevos scraping providers y tareas sin romper la UI.
 
 No-objetivos (v0.1):
+
 - No haremos scraping distribuido ni masivo; enfoque en uso local controlado.
 - No integramos pasarelas de pago ni dashboards de BI complejos (posible export CSV/JSON).
 
@@ -27,10 +28,10 @@ No-objetivos (v0.1):
 
 ## 3. flujo de usuario (MVP)
 
-1) Crear Workspace → Crear Season (definir periodo) → Gestionar Establishments (CRUD) y asignar URL base por plataforma.
-2) En pestaña “Scraping”: seleccionar Season y Establishments, setear parámetros (huéspedes, moneda, locale, delay/retries/concurrency) y lanzar.
-3) Progreso en tiempo real por establecimiento (barra y logs). Posibilidad de cancelar.
-4) Resultados persisten en DB; se pueden exportar CSV/JSON.
+1. Crear Workspace → Crear Season (definir periodo) → Gestionar Establishments (CRUD) y asignar URL base por plataforma.
+2. En pestaña “Scraping”: seleccionar Season y Establishments, setear parámetros (huéspedes, moneda, locale, delay/retries/concurrency) y lanzar.
+3. Progreso en tiempo real por establecimiento (barra y logs). Posibilidad de cancelar.
+4. Resultados persisten en DB; se pueden exportar CSV/JSON.
 
 ## 4. arquitectura
 

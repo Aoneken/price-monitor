@@ -3,6 +3,7 @@
 Fecha: 2025-11-08
 
 ## estado actual (simplificado)
+
 ```
 price-monitor/
   tests/ (antes Foco_01/... movido)
@@ -15,12 +16,14 @@ price-monitor/
 Scripts acoplados (funciones mezcladas) y salidas CSV en carpetas de pruebas.
 
 ## objetivos de reorganización
+
 - Separar lógica de scraping en paquete reutilizable (`price_monitor/`).
 - Mantener CLI estable para backward compatibility.
 - Preparar base para backend FastAPI y posterior frontend.
 - Añadir espacio claro para tests unitarios y de integración.
 
 ## estructura propuesta (fase 1)
+
 ```
 price-monitor/
   price_monitor/
@@ -62,6 +65,7 @@ price-monitor/
 ```
 
 ## estructura propuesta (fase 2, web app)
+
 ```
 price-monitor/
   app/
@@ -83,27 +87,31 @@ price-monitor/
 ```
 
 ## migración incremental
+
 1. Extraer funciones puras de `scrape_real_prices.py` a `price_monitor/core` y `providers/airbnb.py`.
 2. Crear `price_monitor/cli/main.py` con subcomando `scrape-airbnb` que reusa esas funciones.
 3. Reemplazar contenido de `scripts/scrape_real_prices.py` para delegar en CLI.
-4. Añadir tests unitarios (calendar, min_stay, rows) y un test de integración (scrape corto de un listing). 
+4. Añadir tests unitarios (calendar, min_stay, rows) y un test de integración (scrape corto de un listing).
 5. Actualizar `README.md` con nueva forma de invocar.
 6. Fase 2: agregar FastAPI backend usando el paquete ya modularizado.
 
 ## naming y convenciones
+
 - Módulos snake_case, clases PascalCase, funciones/variables snake_case.
 - Directorios en singular para dominio (`core`, `providers`).
 - Tests: `test_*.py` y usar fixtures en `data-fixtures`.
 
 ## control de parámetros
+
 - Config centralizada (`config.py`) con Pydantic (valores por defecto, límites de concurrencia, retries máximos).
 - Subcomandos override (flags CLI) y en backend se puede leer de ENV/DB.
 
 ## manejo de salidas
+
 - Por defecto `output/` para CLI. Backend guardará en DB y exportará sólo bajo demanda (CSV/JSON).
 - Evitar mezclar resultados persistentes con fixtures de tests.
 
 ## validación final
+
 - Mantener script viejo como shim hasta confirmar adopción de CLI nueva.
 - Documentar diferencias en `README.md` sección “Migración”.
-
