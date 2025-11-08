@@ -6,6 +6,19 @@ explore search API to obtain per-night prices exactly as shown on airbnb.com.
 It reads listing metadata from ``establecimientos.csv`` and generates one CSV
 per establishment with nightly availability, minimum stay requirements and
 real prices.
+
+Optimizations added:
+- Safe concurrency for price quotes (controlled via --concurrency)
+- Retries with exponential backoff and jitter for network calls
+- Strict timeouts and basic rate limiting (configurable --delay)
+- Detailed, live progress with Rich (disable via --no-rich)
+
+Example:
+    python3 scrape_real_prices.py \
+        --start 2025-11-08 --end 2026-04-07 \
+        --guests 2 --select "Viento" \
+        --currency USD --locale es-AR \
+        --delay 0.4 --retries 2 --concurrency 3
 """
 
 from __future__ import annotations
@@ -16,12 +29,32 @@ import json
 import sys
 import time
 import re
+import random
+import os
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, timedelta, datetime
 from pathlib import Path
 from typing import Dict, Any, Optional, Iterable, List, Tuple
 from urllib.parse import urlencode
 
 import requests
+
+# Progress rendering (optional)
+try:
+    from rich.progress import (
+        Progress,
+        SpinnerColumn,
+        BarColumn,
+        TextColumn,
+        TimeElapsedColumn,
+        TimeRemainingColumn,
+    )
+    from rich.console import Console
+
+    RICH_AVAILABLE = True
+except Exception:
+    RICH_AVAILABLE = False
 
 
 GRAPHQL_BASE = "https://www.airbnb.com.ar/api/v3"  # Base del endpoint GraphQL público.
@@ -79,8 +112,9 @@ DEFAULT_END_DATE = (
 DEFAULT_GUESTS = 2  # Cantidad de huéspedes por defecto para cotizar.
 DEFAULT_CURRENCY = "USD"  # Moneda para solicitar precios.
 DEFAULT_LOCALE = "en"  # Locale base para los endpoints de explore.
-DEFAULT_DELAY = 0.5  # Pausa entre requests consecutivos en segundos.
+DEFAULT_DELAY = 0.5  # Pausa base entre requests consecutivos en segundos.
 DEFAULT_RETRIES = 3  # Reintentos permitidos para cada request de precio real.
+DEFAULT_CONCURRENCY = 3  # Paralelismo máximo para cotizaciones.
 DEFAULT_CACHE_HOURS = (
     0.0  # Ventana (horas) para reutilizar datos existentes sin reconsultar.
 )
@@ -388,6 +422,13 @@ def fetch_booking_price(
     delay: float,
     retries: int,
 ) -> Tuple[Optional[float], Optional[float], List[str], Optional[str]]:
+    """Obtiene el precio total y por noche para un bloque mínimo.
+
+    Seguridad y cortesía:
+    - Siempre usa timeout.
+    - Reintentos exponenciales con jitter.
+    - Pequeño sleep por request para evitar ráfagas.
+    """
     checkout = checkin + timedelta(days=stay_nights)
     url = f"https://www.airbnb.com.ar/book/stays/{listing_id}"
     params = {
@@ -407,6 +448,15 @@ def fetch_booking_price(
 
     for attempt in range(max(1, retries)):
         try:
+            # Backoff exponencial con jitter suave
+            if attempt > 0:
+                backoff = min(8.0, (2**attempt) * (delay or 0.5))
+                time.sleep(backoff * (0.8 + 0.4 * random.random()))
+            # Pequeño delay proactivo antes de cada request
+            per_req_sleep = max(0.0, (delay or 0.0)) * (0.5 + random.random())
+            if per_req_sleep:
+                time.sleep(per_req_sleep)
+
             response = session.get(url, params=params, timeout=60)
             if response.status_code >= 500:
                 last_error = f"booking_http_{response.status_code}"
@@ -469,7 +519,8 @@ def fetch_booking_price(
         except requests.RequestException as exc:
             last_error = f"booking_error:{exc}"[:200]
 
-        time.sleep(delay * (attempt + 1))
+        # Short tail sleep before next retry to avoid hot loop if error formatting differs
+        time.sleep(min(2.0, (delay or 0.2) * (attempt + 1)))
 
     return None, None, [], last_error or "booking_failed"
 
@@ -479,7 +530,16 @@ def month_count(start: date, end: date) -> int:
 
 
 def fetch_calendar(
-    session: requests.Session, listing_id: str, month: int, year: int, count: int
+    session: requests.Session,
+    listing_id: str,
+    month: int,
+    year: int,
+    count: int,
+    *,
+    locale: str = "en",
+    currency: str = "USD",
+    retries: int = 3,
+    delay: float = 0.5,
 ) -> Dict[str, Any]:
     variables = {
         "request": {
@@ -491,17 +551,31 @@ def fetch_calendar(
     }
     params = {
         "operationName": "PdpAvailabilityCalendar",
-        "locale": "en",
-        "currency": "USD",
+        "locale": locale,
+        "currency": currency,
         "variables": json_dumps_compact(variables),
         "extensions": json_dumps_compact(
             {"persistedQuery": {"version": 1, "sha256Hash": CALENDAR_HASH}}
         ),
     }
     url = f"{GRAPHQL_BASE}/PdpAvailabilityCalendar/{CALENDAR_HASH}?{urlencode(params)}"
-    resp = session.get(url, timeout=30)
-    resp.raise_for_status()
-    return resp.json()
+    last_exc: Optional[Exception] = None
+    for attempt in range(max(1, retries)):
+        try:
+            if attempt > 0:
+                backoff = min(8.0, (2**attempt) * (delay or 0.5))
+                time.sleep(backoff * (0.8 + 0.4 * random.random()))
+            resp = session.get(url, timeout=30)
+            if resp.status_code >= 500:
+                last_exc = RuntimeError(f"calendar_http_{resp.status_code}")
+            else:
+                resp.raise_for_status()
+                return resp.json()
+        except requests.RequestException as exc:
+            last_exc = exc
+    if last_exc:
+        raise last_exc
+    raise RuntimeError("calendar_fetch_failed")
 
 
 def build_daymap(calendar_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -546,7 +620,17 @@ def build_rows(
     retries: int,
     cache_hours: float,
     existing_rows: Dict[date, Dict[str, Any]],
+    *,
+    max_workers: int = DEFAULT_CONCURRENCY,
 ) -> List[List[str]]:
+    """Construye todas las filas a partir del calendario.
+
+    Optimizaciones:
+    - Reutilización de caché por fecha.
+    - Agrupación por bloques de estadía mínima.
+    - Ejecución concurrente (controlada) de cotizaciones por bloque.
+    - Progreso detallado si Rich está disponible.
+    """
     rows_info: Dict[date, Dict[str, Any]] = {}
     dates = list(daterange(start_date, end_date))
     today = date.today()
@@ -654,9 +738,14 @@ def build_rows(
 
         rows_info[current_day] = info
 
+    # Preparar tareas concurrentes sin superponer bloques
+    tasks: List[Tuple[date, int]] = []
+    covered: set[date] = set()
     for idx, current_day in enumerate(dates):
         info = rows_info[current_day]
         if info.get("cached_row") is not None:
+            continue
+        if current_day in covered:
             continue
         day_obj = info.get("day_obj")
         if not day_obj:
@@ -692,41 +781,56 @@ def build_rows(
         ):
             continue
 
-        per_night, total_price, extra_notes, error = fetch_booking_price(
-            session,
-            listing_id,
-            current_day,
-            min_stay,
-            guests,
-            currency,
-            locale,
-            delay,
-            retries,
+        tasks.append((current_day, min_stay))
+        for bd in block_dates:
+            covered.add(bd)
+
+    # Ejecutar cotizaciones en paralelo con barra de progreso (si disponible)
+    lock = threading.Lock()
+    console = Console(stderr=True) if RICH_AVAILABLE else None
+    total_tasks = len(tasks)
+    progress = None
+    task_id = None
+    if RICH_AVAILABLE:
+        progress = Progress(
+            SpinnerColumn(),
+            TextColumn("[bold blue]Cotizando[/]"),
+            BarColumn(),
+            TextColumn("{task.completed}/{task.total}"),
+            TimeElapsedColumn(),
+            TimeRemainingColumn(),
+            transient=True,
+            console=console,
         )
+        progress.start()
+        task_id = progress.add_task("cotizar", total=total_tasks)
 
-        if error:
-            if error not in info["notes"]:
-                info["notes"].append(error)
-            continue
-
+    def apply_block_result(
+        start_day: date,
+        min_stay_local: int,
+        per_night: Optional[float],
+        total_price: Optional[float],
+        extra_notes: List[str],
+    ) -> None:
         timestamp = datetime.now().isoformat()
-        for offset, block_day in enumerate(block_dates):
+        idx_local = dates.index(start_day)
+        for offset, block_day in enumerate(
+            dates[idx_local : idx_local + min_stay_local]
+        ):
             block_info = rows_info.get(block_day)
             if not block_info or block_info.get("day_obj") is None:
                 continue
             if block_info.get("cached_row") is not None:
                 continue
-
-            if block_info["price_per_night"] is None:
+            if per_night is not None and block_info.get("price_per_night") is None:
                 block_info["price_per_night"] = per_night
-            if offset == 0:
-                block_info["price_basis_nights"] = min_stay
+            if offset == 0 and total_price is not None:
+                block_info["price_basis_nights"] = min_stay_local
                 block_info["total_price"] = total_price
             else:
-                carry_note = f"carried_from={current_day.isoformat()}"
+                carry_note = f"carried_from={start_day.isoformat()}"
                 if carry_note not in block_info["notes"]:
                     block_info["notes"].append(carry_note)
-
             if block_info["day_obj"] and not block_info["day_obj"].get(
                 "availableForCheckin"
             ):
@@ -737,12 +841,59 @@ def build_rows(
             ):
                 if "no_checkout" not in block_info["notes"]:
                     block_info["notes"].append("no_checkout")
-
             for note in extra_notes:
                 if note not in block_info["notes"]:
                     block_info["notes"].append(note)
-
             block_info["inserted_at"] = block_info.get("inserted_at") or timestamp
+
+    try:
+        if tasks:
+            with ThreadPoolExecutor(
+                max_workers=max(1, min(8, int(max_workers)))
+            ) as executor:
+                future_map = {}
+                for start_day, min_stay in tasks:
+                    future = executor.submit(
+                        fetch_booking_price,
+                        session,
+                        listing_id,
+                        start_day,
+                        min_stay,
+                        guests,
+                        currency,
+                        locale,
+                        delay,
+                        retries,
+                    )
+                    future_map[future] = (start_day, min_stay)
+
+                for fut in as_completed(future_map):
+                    start_day, min_stay_local = future_map[fut]
+                    try:
+                        per_night, total_price, extra_notes, error = fut.result()
+                    except Exception as exc:
+                        per_night = None
+                        total_price = None
+                        extra_notes = []
+                        error = f"booking_exc:{exc}"[:200]
+
+                    with lock:
+                        info = rows_info[start_day]
+                        if error and error not in info["notes"]:
+                            info["notes"].append(error)
+                        else:
+                            apply_block_result(
+                                start_day,
+                                min_stay_local,
+                                per_night,
+                                total_price,
+                                extra_notes,
+                            )
+                    if progress and task_id is not None:
+                        progress.advance(task_id, 1)
+    finally:
+        if progress:
+            progress.stop()
 
     final_rows: List[List[str]] = []
     for current_day in dates:
@@ -984,6 +1135,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         help=f"Reintentos por request de precio (default: {DEFAULT_RETRIES})",
     )
     parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=DEFAULT_CONCURRENCY,
+        help=f"Número máximo de cotizaciones en paralelo (default: {DEFAULT_CONCURRENCY})",
+    )
+    parser.add_argument(
         "--cache-hours",
         type=float,
         default=DEFAULT_CACHE_HOURS,
@@ -992,6 +1149,11 @@ def main(argv: Optional[List[str]] = None) -> int:
             f" consultas (default: {DEFAULT_CACHE_HOURS})"
         ),
     )
+    parser.add_argument(
+        "--no-rich",
+        action="store_true",
+        help="Deshabilita la barra de progreso enriquecida (usa prints simples)",
+    )
 
     args = parser.parse_args(argv)
 
@@ -999,6 +1161,16 @@ def main(argv: Optional[List[str]] = None) -> int:
     end_date = date.fromisoformat(args.end)
     if end_date < start_date:
         parser.error("--end debe ser >= --start")
+
+    # Validaciones y límites de seguridad
+    if args.guests < 1:
+        parser.error("--guests debe ser >= 1")
+    if args.retries < 0 or args.retries > 5:
+        parser.error("--retries debe estar entre 0 y 5")
+    if args.concurrency < 1 or args.concurrency > 8:
+        parser.error("--concurrency debe estar entre 1 y 8")
+    if args.delay < 0:
+        parser.error("--delay no puede ser negativo")
 
     csv_path = resolve_csv_path(args.csv)
     all_listings = parse_establecimientos_csv(csv_path)
@@ -1044,11 +1216,25 @@ def main(argv: Optional[List[str]] = None) -> int:
         listing_id = listing["listing_id"]
         listing_name = listing["Establecimiento"] or f"Listing {listing_id}"
         listing_url = listing["Airbnb"]
-
-        print(f"Procesando {listing_name} ({listing_id})", file=sys.stderr)
+        # Sección de progreso
+        if RICH_AVAILABLE and not args.no_rich:
+            console = Console(stderr=True)
+            console.rule(
+                f"[bold white]Procesando[/] [bold cyan]{listing_name}[/] ([magenta]{listing_id}[/])"
+            )
+        else:
+            print(f"=== Procesando {listing_name} ({listing_id}) ===", file=sys.stderr)
         try:
             calendar_data = fetch_calendar(
-                session, listing_id, start_date.month, start_date.year, total_months
+                session,
+                listing_id,
+                start_date.month,
+                start_date.year,
+                total_months,
+                locale=args.locale,
+                currency=args.currency,
+                retries=max(1, args.retries),
+                delay=args.delay,
             )
         except requests.RequestException as exc:
             print(f"  Error calendario: {exc}", file=sys.stderr)
@@ -1060,6 +1246,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             / f"{sanitize_filename(listing_name)}_{start_date}_{end_date}.csv"
         )
         existing_rows = load_existing_rows(output_path)
+        # Limitar concurrencia mediante variable de entorno o flag
+        # Nota: build_rows usa un executor con tamaño definido internamente para seguridad.
         rows = build_rows(
             session,
             listing_id,
@@ -1073,6 +1261,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             args.retries,
             args.cache_hours,
             existing_rows,
+            max_workers=args.concurrency,
         )
         write_csv(
             output_path,
