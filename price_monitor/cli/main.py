@@ -63,7 +63,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         help="Desactivar barra Rich (modo texto simple)",
     )
     p.add_argument("--output-dir", type=Path, default=Path("output"))
-    p.add_argument("--freeze-before", type=str, default=None, help="Congelar filas anteriores a esta fecha (YYYY-MM-DD)")
+    p.add_argument(
+        "--freeze-before",
+        type=str,
+        default=None,
+        help="Congelar filas anteriores a esta fecha (YYYY-MM-DD)",
+    )
     p.add_argument("--json", action="store_true", help="Emitir JSON junto al CSV")
 
     args = p.parse_args(argv)

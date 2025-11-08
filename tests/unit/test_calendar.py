@@ -8,4 +8,9 @@ def test_month_count_simple():
 
 
 def test_build_daymap_empty():
-    assert build_daymap({"data": {"merlin": {"pdpAvailabilityCalendar": {"calendarMonths": []}}}}) == {}
+    assert (
+        build_daymap(
+            {"data": {"merlin": {"pdpAvailabilityCalendar": {"calendarMonths": []}}}}
+        )
+        == {}
+    )

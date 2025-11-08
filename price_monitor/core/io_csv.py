@@ -89,7 +89,9 @@ def write_csv(
     today = date.today()
     freeze_boundary = min(today, freeze_before) if freeze_before else today
     frozen_rows: Dict[date, List[str]] = {
-        day: info.get("row", []) for day, info in existing_rows.items() if day < freeze_boundary
+        day: info.get("row", [])
+        for day, info in existing_rows.items()
+        if day < freeze_boundary
     }
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

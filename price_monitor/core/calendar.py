@@ -8,7 +8,11 @@ from urllib.parse import urlencode
 
 import requests
 
-from price_monitor.providers.airbnb import GRAPHQL_BASE, CALENDAR_HASH, json_dumps_compact
+from price_monitor.providers.airbnb import (
+    GRAPHQL_BASE,
+    CALENDAR_HASH,
+    json_dumps_compact,
+)
 
 
 def month_count(start: date, end: date) -> int:
@@ -27,20 +31,29 @@ def fetch_calendar(
     retries: int = 3,
     delay: float = 0.5,
 ) -> Dict[str, Any]:
-    variables = {"request": {"count": count, "listingId": listing_id, "month": month, "year": year}}
+    variables = {
+        "request": {
+            "count": count,
+            "listingId": listing_id,
+            "month": month,
+            "year": year,
+        }
+    }
     params = {
         "operationName": "PdpAvailabilityCalendar",
         "locale": locale,
         "currency": currency,
         "variables": json_dumps_compact(variables),
-        "extensions": json_dumps_compact({"persistedQuery": {"version": 1, "sha256Hash": CALENDAR_HASH}}),
+        "extensions": json_dumps_compact(
+            {"persistedQuery": {"version": 1, "sha256Hash": CALENDAR_HASH}}
+        ),
     }
     url = f"{GRAPHQL_BASE}/PdpAvailabilityCalendar/{CALENDAR_HASH}?{urlencode(params)}"
     last_exc: Exception | None = None
     for attempt in range(max(1, retries)):
         try:
             if attempt > 0:
-                backoff = min(8.0, (2 ** attempt) * (delay or 0.5))
+                backoff = min(8.0, (2**attempt) * (delay or 0.5))
                 time.sleep(backoff * (0.8 + 0.4 * random.random()))
             resp = session.get(url, timeout=30)
             if resp.status_code >= 500:

@@ -13,27 +13,37 @@ def synthetic_daymap():
     days = []
     for i in range(3):
         d = start + timedelta(days=i)
-        days.append({
-            "calendarDate": d.isoformat(),
-            "available": True,
-            "availableForCheckin": True if i == 0 else False,
-            "availableForCheckout": True if i == 2 else True,
-            "bookable": True,
-            "minNights": 2,
-            "maxNights": 31,
-        })
+        days.append(
+            {
+                "calendarDate": d.isoformat(),
+                "available": True,
+                "availableForCheckin": True if i == 0 else False,
+                "availableForCheckout": True if i == 2 else True,
+                "bookable": True,
+                "minNights": 2,
+                "maxNights": 31,
+            }
+        )
     # Map like build_daymap would produce
     return {day["calendarDate"]: day for day in days}
 
 
 def test_build_rows_min_stay_block(monkeypatch, synthetic_daymap):
     # Monkeypatch fetch_booking_price used inside core.rows
-    def fake_fetch_booking_price(session, listing_id, checkin, stay_nights, guests, currency, delay, retries):
+    def fake_fetch_booking_price(
+        session, listing_id, checkin, stay_nights, guests, currency, delay, retries
+    ):
         assert stay_nights == 2
         total = 200.0
-        return total / stay_nights, total, ["base_total=160.00", "service_total=40.00"], None
+        return (
+            total / stay_nights,
+            total,
+            ["base_total=160.00", "service_total=40.00"],
+            None,
+        )
 
     import price_monitor.core.rows as rows_mod
+
     monkeypatch.setattr(rows_mod, "fetch_booking_price", fake_fetch_booking_price)
 
     session = object()  # not used by fake

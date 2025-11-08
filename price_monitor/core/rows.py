@@ -7,6 +7,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from price_monitor.core.io_csv import CSV_COLUMNS, INSERTED_AT_INDEX
 from price_monitor.providers.airbnb import fetch_booking_price
+
 # build_daymap import removed (not used here)
 
 PRICE_PER_NIGHT_INDEX = CSV_COLUMNS.index("pricePerNight")
@@ -261,7 +262,9 @@ def build_rows(
                 start_day, min_stay_local = future_map[fut]
                 try:
                     per_night, total_price, extra_notes, error = fut.result()
-                except Exception as exc:  # noqa: BLE001 intentionally broad: network/parse variability
+                except (
+                    Exception
+                ) as exc:  # noqa: BLE001 intentionally broad: network/parse variability
                     per_night, total_price, extra_notes, error = (
                         None,
                         None,
