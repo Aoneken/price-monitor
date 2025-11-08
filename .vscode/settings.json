@@ -1,38 +1,89 @@
 {
-    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
-    "python.testing.pytestEnabled": true,
-    "python.testing.pytestArgs": [
-        "tests"
-    ],
-    "python.linting.enabled": true,
-    "python.linting.pylintEnabled": false,
-    "python.linting.flake8Enabled": true,
-    "python.formatting.provider": "black",
+  // --- Configuración Esencial de Python (Tus configuraciones) ---
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["tests"],
+  "python.linting.enabled": true,
+  "python.linting.pylintEnabled": false,
+  "python.linting.flake8Enabled": true,
+  "python.formatting.provider": "black",
+  "autoDocstring.docstringFormat": "google",
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.autoImportCompletions": true,
+
+  // --- AÑADIDO: Contexto de Testing Más Explícito ---
+  // Ayuda a la IA y al Test Explorer a encontrar pruebas de forma fiable
+  "python.testing.pytestPattern": "test_*.py",
+
+  // --- Configuración Específica del Lenguaje (Tu configuración, excelente práctica) ---
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
     "editor.formatOnSave": true,
-    "files.exclude": {
-        "**/__pycache__": true,
-        "**/*.pyc": true,
-        ".pytest_cache": true,
-        "**/.DS_Store": true
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
     },
-    "files.watcherExclude": {
-        "**/__pycache__/**": true,
-        "**/node_modules/**": true,
-        "**/.venv/**": true
-    },
-    "terminal.integrated.env.linux": {
-        "PYTHONPATH": "${workspaceFolder}"
-    },
-    "[python]": {
-        "editor.defaultFormatter": "ms-python.black-formatter",
-        "editor.formatOnSave": true,
-        "editor.codeActionsOnSave": {
-            "source.organizeImports": "explicit"
-        }
-    },
-    "autoDocstring.docstringFormat": "google",
-    "python.analysis.typeCheckingMode": "basic",
-    "python.analysis.autoImportCompletions": true,
-    "python-envs.defaultEnvManager": "ms-python.python:system",
-    "python-envs.pythonProjects": []
+    // AÑADIDO: Asegura 4 espacios para Python, anulando cualquier configuración de usuario
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true
+  },
+
+  // --- AÑADIDO: Configuración para otros archivos comunes del proyecto ---
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.tabSize": 2
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.tabSize": 2
+  },
+  "[markdown]": {
+    "editor.formatOnSave": true,
+    "editor.wordWrap": "on",
+    "files.trimTrailingWhitespace": false
+  },
+
+  // --- Configuración General del Editor ---
+  "editor.formatOnSave": true, // Mantenido para archivos sin anulaciones específicas
+  // AÑADIDO: Limpia el contexto de la IA en todos los archivos
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+
+  // --- Exclusiones de Archivos (Tu configuración, vital para el contexto de la IA) ---
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    ".pytest_cache": true,
+    "**/.DS_Store": true,
+    "**/.venv": true // AÑADIDO: Oculta.venv del explorador
+  },
+  "files.watcherExclude": {
+    "**/__pycache__/**": true,
+    "**/node_modules/**": true,
+    "**/.venv/**": true
+  },
+  // AÑADIDO: Excluye directorios ruidosos de las búsquedas de @workspace
+  "search.exclude": {
+    "**/__pycache__": true,
+    ".pytest_cache": true,
+    "**/.venv": true,
+    "**/node_modules": true,
+    "**/bower_components": true
+  },
+
+  // --- Configuración de Terminal (Tu configuración) ---
+  "terminal.integrated.env.linux": {
+    "PYTHONPATH": "${workspaceFolder}"
+  },
+  "terminal.integrated.env.osx": {
+    "PYTHONPATH": "${workspaceFolder}"
+  },
+  "terminal.integrated.env.windows": {
+    "PYTHONPATH": "${workspaceFolder}"
+  }
+
+  // --- Configuración obsoleta eliminada (ya no es necesaria) ---
+  // "python-envs.defaultEnvManager": "ms-python.python:system", (obsoleto)
+  // "python-envs.pythonProjects": (obsoleto)
 }

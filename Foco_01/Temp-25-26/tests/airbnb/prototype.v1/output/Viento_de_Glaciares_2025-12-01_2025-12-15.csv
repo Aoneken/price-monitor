@@ -1,0 +1,23 @@
+# Listing: Viento de Glaciares
+# Listing ID: 1413234233737891700
+# Listing URL: https://www.airbnb.com.ar/rooms/1413234233737891700
+# Period: 2025-12-01 to 2025-12-15
+# Guests: 2
+# Generated: 2025-11-08T12:07:24.554571
+#
+date,available,availableForCheckin,availableForCheckout,bookable,minNights,maxNights,pricePerNight,currency,notes
+"2025-12-01","False","False","True","False","2","31","","",""
+"2025-12-02","False","False","False","False","2","31","","",""
+"2025-12-03","False","False","False","False","2","31","","",""
+"2025-12-04","True","True","False","True","2","31","150.00","USD",""
+"2025-12-05","True","True","True","True","2","31","150.00","USD",""
+"2025-12-06","True","True","True","True","2","31","150.00","USD",""
+"2025-12-07","True","True","True","True","2","31","150.00","USD",""
+"2025-12-08","True","True","True","True","2","31","150.00","USD",""
+"2025-12-09","True","True","True","True","2","31","150.00","USD",""
+"2025-12-10","True","True","True","True","2","31","150.00","USD",""
+"2025-12-11","True","True","True","True","2","31","150.00","USD",""
+"2025-12-12","True","True","True","True","2","31","150.00","USD",""
+"2025-12-13","True","True","True","True","2","31","150.00","USD",""
+"2025-12-14","True","True","True","True","2","31","150.00","USD",""
+"2025-12-15","True","True","True","True","2","31","150.00","USD",""
