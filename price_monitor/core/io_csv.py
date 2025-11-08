@@ -84,10 +84,12 @@ def write_csv(
     rows: List[List[str]],
     cache_hours: float,
     existing_rows: Dict[date, Dict[str, Any]],
+    freeze_before: date | None = None,
 ):
     today = date.today()
+    freeze_boundary = min(today, freeze_before) if freeze_before else today
     frozen_rows: Dict[date, List[str]] = {
-        day: info.get("row", []) for day, info in existing_rows.items() if day < today
+        day: info.get("row", []) for day, info in existing_rows.items() if day < freeze_boundary
     }
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -99,6 +101,8 @@ def write_csv(
         handle.write(f"# Guests: {guests}\n")
         handle.write(f"# Generated: {datetime.now().isoformat()}\n")
         handle.write(f"# Cache Hours: {cache_hours}\n")
+        if freeze_before:
+            handle.write(f"# Freeze Before: {freeze_before.isoformat()}\n")
         handle.write("#\n")
         writer = csv.writer(handle)
         writer.writerow(CSV_COLUMNS)
@@ -109,7 +113,7 @@ def write_csv(
                 writer.writerow(row)
                 continue
 
-            if row_day < today and row_day in frozen_rows:
+            if row_day < freeze_boundary and row_day in frozen_rows:
                 writer.writerow(frozen_rows[row_day])
             else:
                 writer.writerow(row)

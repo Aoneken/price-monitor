@@ -5,6 +5,7 @@ import sys
 from datetime import date, timedelta
 from pathlib import Path
 from typing import List, Optional, Dict, Any
+import json
 
 import requests
 from rich.console import Console
@@ -22,7 +23,7 @@ from price_monitor.core.selection import (
     parse_establecimientos_csv,
     select_listings_by_tokens,
 )
-from price_monitor.core.io_csv import load_existing_rows, write_csv
+from price_monitor.core.io_csv import load_existing_rows, write_csv, CSV_COLUMNS
 from price_monitor.core.rows import build_rows
 from price_monitor.providers.airbnb import COMMON_HEADERS
 
@@ -62,11 +63,19 @@ def main(argv: Optional[List[str]] = None) -> int:
         help="Desactivar barra Rich (modo texto simple)",
     )
     p.add_argument("--output-dir", type=Path, default=Path("output"))
+    p.add_argument("--freeze-before", type=str, default=None, help="Congelar filas anteriores a esta fecha (YYYY-MM-DD)")
+    p.add_argument("--json", action="store_true", help="Emitir JSON junto al CSV")
 
     args = p.parse_args(argv)
 
     start_date = date.fromisoformat(args.start)
     end_date = date.fromisoformat(args.end)
+    freeze_before = None
+    if args.freeze_before:
+        try:
+            freeze_before = date.fromisoformat(args.freeze_before)
+        except ValueError:
+            p.error("--freeze-before debe ser YYYY-MM-DD")
     if end_date < start_date:
         p.error("--end >= --start")
 
@@ -192,7 +201,16 @@ def main(argv: Optional[List[str]] = None) -> int:
                 rows,
                 args.cache_hours,
                 existing_rows,
+                freeze_before=freeze_before,
             )
+            if args.json:
+                json_path = output_path.with_suffix(".json")
+                row_dicts = [
+                    {col: row[idx] if idx < len(row) else "" for idx, col in enumerate(CSV_COLUMNS)}  # type: ignore[name-defined]
+                    for row in rows
+                ]
+                with json_path.open("w", encoding="utf-8") as jh:
+                    json.dump(row_dicts, jh, ensure_ascii=False, indent=2)
             console.print(f"[green]OK[/] {output_path}")
     else:
         with Progress(
@@ -266,7 +284,16 @@ def main(argv: Optional[List[str]] = None) -> int:
                     rows,
                     args.cache_hours,
                     existing_rows,
+                    freeze_before=freeze_before,
                 )
+                if args.json:
+                    json_path = output_path.with_suffix(".json")
+                    row_dicts = [
+                        {col: row[idx] if idx < len(row) else "" for idx, col in enumerate(CSV_COLUMNS)}  # type: ignore[name-defined]
+                        for row in rows
+                    ]
+                    with json_path.open("w", encoding="utf-8") as jh:
+                        json.dump(row_dicts, jh, ensure_ascii=False, indent=2)
                 console.print(f"[green]OK[/] {output_path}")
                 progress.advance(listings_task)
     return 0
