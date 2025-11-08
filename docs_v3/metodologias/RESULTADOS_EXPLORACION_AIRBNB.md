@@ -1,17 +1,20 @@
 # Resultados de Exploración Airbnb (Automático)
 
-## Listing
-- Base URL: https://www.airbnb.es/rooms/1413234233737891700
+## Ejemplo 1: AIRBNB - "Viento de Glaciares – Premium 1"
+
+### Resultados determinados por el usuario
+- Base URL: https://www.airbnb.es/rooms/1413234233737891700?source_impression_id=p3_1762534610_P3OA0Hiw69kbiyPi&check_in=2026-01-06&guests=2&adults=2&check_out=2026-01-08&currency=USD
 - Check-in: 2026-01-06
 - Check-out: 2026-01-08
+- Cant. Noches: 2
 - Variantes probadas: 1
 - Encontrado: True
 - WiFi incluido: Sí
 - Desayuno incluido: Sí
-- Limpieza aparte: No
-- Precio (snippet): $666
+- Limpieza aparte: **DESESTIMAR CUESTIONES VINCULADAS A LIMPIEZA** ya no es un dato de interés en ninguna fase de este sistema.
+- Precio (snippet): 665,03 USD
+- Precio por noche: 332,52
 
-## Comentarios del usuario
 
 DATO;Copy Selector;Copy element
 
@@ -29,19 +32,6 @@ Hay Wifi;#site-content > div > div:nth-child(1) > div:nth-child(1) > div:nth-chi
 Hay desayuno;#site-content > div > div:nth-child(1) > div:nth-child(1) > div:nth-child(3) > div > div._16e70jgn > div > div:nth-child(8) > div > div:nth-child(2) > section > div.cyf4um4.atm_9s_1txwivl.atm_h_1fhbwtr.atm_fc_1y6m0gg.atm_be_1g80g66.atm_gz_l2osg1.atm_h0_l2osg1.atm_vy_i13f0f.atm_gz_l2osg1__kgj4qw.atm_h0_l2osg1__kgj4qw.atm_vy_i13f0f__kgj4qw.atm_gz_w059lc__oggzyc.atm_h0_w059lc__oggzyc.atm_vy_1rg4ac0__oggzyc.atm_gz_w059lc__1v156lz.atm_h0_w059lc__1v156lz.atm_vy_1rg4ac0__1v156lz.atm_gz_w059lc__qky54b.atm_h0_w059lc__qky54b.atm_vy_1rg4ac0__qky54b.atm_gz_w059lc__jx8car.atm_h0_w059lc__jx8car.atm_vy_1rg4ac0__jx8car.dir.dir-ltr > div:nth-child(9) > div > div:nth-child(1);<div class="">Desayuno</div>
 
 **DESESTIMAR CUESTIONES VINCULADAS A LIMPIEZA** ya no es un dato de interés en ninguna fase de este sistema.
-
-### RESULTADO DEL USUARIO:
-- Base URL: https://www.airbnb.es/rooms/1413234233737891700?source_impression_id=p3_1762534610_P3OA0Hiw69kbiyPi&check_in=2026-01-06&guests=2&adults=2&check_out=2026-01-08&currency=USD
-- Check-in: 2026-01-06
-- Check-out: 2026-01-08
-- Cant. Noches: 2
-- Variantes probadas: 1
-- Encontrado: True
-- WiFi incluido: Sí
-- Desayuno incluido: Sí
-- Limpieza aparte: **DESESTIMAR CUESTIONES VINCULADAS A LIMPIEZA** ya no es un dato de interés en ninguna fase de este sistema.
-- Precio (snippet): 665,03 USD
-- Precio por noche: 332,52
 
 ---
 
@@ -136,4 +126,3 @@ No hay desayuno;#site-content > div > div:nth-child(1) > div:nth-child(1) > div:
 - Precio por noche: 234,00
 
 ---
-
