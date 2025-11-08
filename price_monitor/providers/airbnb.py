@@ -4,7 +4,7 @@ import json
 import random
 import time
 from datetime import date, timedelta
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 
@@ -83,7 +83,6 @@ def fetch_booking_price(
     stay_nights: int,
     guests: int,
     currency: str,
-    locale: str,
     delay: float,
     retries: int,
 ) -> Tuple[Optional[float], Optional[float], List[str], Optional[str]]:
@@ -129,7 +128,9 @@ def fetch_booking_price(
                         notes: List[str] = []
                         total_fmt = total_info.get("amountFormatted")
                         if total_fmt:
-                            clean_total_fmt = total_fmt.replace("\xa0", " ").replace(" ", "")
+                            clean_total_fmt = total_fmt.replace("\xa0", " ").replace(
+                                " ", ""
+                            )
                             notes.append(f"total_fmt={clean_total_fmt}")
                         base_amount: Optional[float] = None
                         service_amount: Optional[float] = None
@@ -143,8 +144,13 @@ def fetch_booking_price(
                                 value = int(nested_micros) / 1_000_000
                                 label_clean = label.replace("\xa0", " ")
                                 formatted = total_nested.get("amountFormatted") or ""
-                                formatted_clean = formatted.replace("\xa0", " ").replace(" ", "")
-                                if ("servicio" in label_clean or "service" in label_clean):
+                                formatted_clean = formatted.replace(
+                                    "\xa0", " "
+                                ).replace(" ", "")
+                                if (
+                                    "servicio" in label_clean
+                                    or "service" in label_clean
+                                ):
                                     service_amount = value
                                     if formatted_clean:
                                         notes.append(f"service_fmt={formatted_clean}")

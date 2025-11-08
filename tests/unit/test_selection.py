@@ -1,4 +1,3 @@
-from pathlib import Path
 from price_monitor.core.selection import select_listings_by_tokens
 
 listings = [

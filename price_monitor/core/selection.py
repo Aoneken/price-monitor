@@ -3,7 +3,7 @@ from __future__ import annotations
 import csv
 import re
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Dict, List
 
 BASE_LISTING_URL_TEMPLATE = "https://www.airbnb.com.ar/rooms/{listing_id}"
 
@@ -54,7 +54,9 @@ def _select_token_indices(token: str, total: int) -> List[int]:
 essential_stopwords = {"de", "la", "el", "los", "las", "y", "del"}
 
 
-def select_listings_by_tokens(listings: List[Dict[str, str]], selector: str) -> List[Dict[str, str]]:
+def select_listings_by_tokens(
+    listings: List[Dict[str, str]], selector: str
+) -> List[Dict[str, str]]:
     tokens = [tok.strip() for tok in re.split(r"[\s,]+", selector) if tok.strip()]
     if not tokens:
         raise ValueError("No se especificaron selecciones válidas.")
@@ -103,7 +105,9 @@ def select_listings_by_tokens(listings: List[Dict[str, str]], selector: str) -> 
                 )
 
         if not matched_items:
-            raise ValueError(f"No se encontró un establecimiento que coincida con '{token}'")
+            raise ValueError(
+                f"No se encontró un establecimiento que coincida con '{token}'"
+            )
 
         for item in matched_items:
             listing_id = item["listing_id"]

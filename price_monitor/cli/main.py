@@ -2,117 +2,65 @@ from __future__ import annotations
 
 import argparse
 import sys
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 import requests
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    BarColumn,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+)
 
 from price_monitor.core.calendar import month_count, fetch_calendar, build_daymap
-from price_monitor.core.selection import parse_establecimientos_csv, select_listings_by_tokens
+from price_monitor.core.selection import (
+    parse_establecimientos_csv,
+    select_listings_by_tokens,
+)
 from price_monitor.core.io_csv import load_existing_rows, write_csv
-from price_monitor.providers.airbnb import COMMON_HEADERS, fetch_booking_price
-
-# Reuse logic from original script (simplified build process) ------------------
-
-
-def build_rows(
-    session: requests.Session,
-    listing_id: str,
-    start_date: date,
-    end_date: date,
-    guests: int,
-    daymap,
-    currency: str,
-    locale: str,
-    delay: float,
-    retries: int,
-):
-    # Minimal subset: only availability + direct booking attempt per first available block of min stay.
-    from datetime import datetime, timedelta
-
-    dates = []
-    cur = start_date
-    while cur <= end_date:
-        dates.append(cur)
-        cur += timedelta(days=1)
-
-    rows = []
-    for d in dates:
-        iso = d.isoformat()
-        day_obj = daymap.get(iso)
-        notes = []
-        price_per_night = ""
-        price_basis_nights = ""
-        stay_total = ""
-        min_nights = ""
-        max_nights = ""
-        currency_code = ""
-        if day_obj:
-            available = day_obj.get("available")
-            bookable = day_obj.get("bookable")
-            min_nights = day_obj.get("minNights")
-            max_nights = day_obj.get("maxNights")
-            if available and bookable and day_obj.get("availableForCheckin"):
-                # Try fetch a price block of min_nights
-                mn = max(1, int(min_nights or 1))
-                per, total, extra, err = fetch_booking_price(
-                    session,
-                    listing_id,
-                    d,
-                    mn,
-                    guests,
-                    currency,
-                    locale,
-                    delay,
-                    retries,
-                )
-                if err:
-                    notes.append(err)
-                else:
-                    price_per_night = f"{per:.2f}"
-                    price_basis_nights = str(mn)
-                    stay_total = f"{total:.2f}"
-                    currency_code = currency
-                    notes.extend(extra)
-            row = [
-                iso,
-                str(day_obj.get("available")),
-                str(day_obj.get("availableForCheckin")),
-                str(day_obj.get("availableForCheckout")),
-                str(day_obj.get("bookable")),
-                str(min_nights or ""),
-                str(max_nights or ""),
-                price_per_night,
-                price_basis_nights,
-                stay_total,
-                currency_code,
-                datetime.now().isoformat(),
-                ";".join(notes),
-            ]
-        else:
-            row = [iso, "", "", "", "", "", "", "", "", "", "", "", "no_calendar_data"]
-        rows.append(row)
-    return rows
+from price_monitor.core.rows import build_rows
+from price_monitor.providers.airbnb import COMMON_HEADERS
 
 
 # CLI -------------------------------------------------------------------------
 
+
 def main(argv: Optional[List[str]] = None) -> int:
     p = argparse.ArgumentParser(description="Price Monitor CLI (Airbnb MVP)")
-    p.add_argument("scrape-airbnb", nargs="?", help="Modo scrape Airbnb (subcomando implícito)")
+    p.add_argument(
+        "scrape-airbnb", nargs="?", help="Modo scrape Airbnb (subcomando implícito)"
+    )
     p.add_argument("--start", required=True)
     p.add_argument("--end", required=True)
     p.add_argument("--guests", type=int, default=2)
     p.add_argument("--csv", type=Path)
-    p.add_argument("--select", help="Selector de establecimientos (índices, ID, fragmento nombre)")
+    p.add_argument(
+        "--select", help="Selector de establecimientos (índices, ID, fragmento nombre)"
+    )
     p.add_argument("--listing-id", action="append")
     p.add_argument("--currency", default="USD")
     p.add_argument("--locale", default="en")
     p.add_argument("--delay", type=float, default=0.4)
     p.add_argument("--retries", type=int, default=2)
+    p.add_argument(
+        "--cache-hours",
+        type=float,
+        default=6.0,
+        help="Horas para reutilizar filas recientes",
+    )
+    p.add_argument(
+        "--max-workers", type=int, default=4, help="Máximo de hilos para precios"
+    )
+    p.add_argument(
+        "--no-rich",
+        action="store_true",
+        help="Desactivar barra Rich (modo texto simple)",
+    )
     p.add_argument("--output-dir", type=Path, default=Path("output"))
 
     args = p.parse_args(argv)
@@ -158,20 +106,44 @@ def main(argv: Optional[List[str]] = None) -> int:
     total_months = month_count(start_date, end_date)
 
     console = Console(stderr=True)
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[bold blue]Scrape[/]"),
-        BarColumn(),
-        TextColumn("{task.completed}/{task.total}"),
-        TimeElapsedColumn(),
-        TimeRemainingColumn(),
-        console=console,
-    ) as progress:
-        task = progress.add_task("listings", total=len(listings))
-        for listing in listings:
+
+    def estimate_booking_tasks(daymap: Dict[str, Any]) -> int:
+        # Replica ligera de la lógica de bloques para contar futuras llamadas a precios.
+        dates: List[date] = []
+        cur = start_date
+        while cur <= end_date:
+            dates.append(cur)
+            cur += timedelta(days=1)
+        tasks_local = 0
+        covered: set[date] = set()
+        for idx, current_day in enumerate(dates):
+            if current_day in covered:
+                continue
+            day_obj = daymap.get(current_day.isoformat())
+            if not day_obj:
+                continue
+            available = bool(day_obj.get("available"))
+            bookable = bool(day_obj.get("bookable"))
+            can_checkin = bool(day_obj.get("availableForCheckin"))
+            if not (available and bookable and can_checkin):
+                continue
+            min_nights_raw = day_obj.get("minNights")
+            min_stay = max(1, int(min_nights_raw if min_nights_raw else 1))
+            remaining = len(dates) - idx
+            if remaining < min_stay:
+                continue
+            # Marcar los días cubiertos por el bloque
+            for block_day in dates[idx : idx + min_stay]:
+                covered.add(block_day)
+            tasks_local += 1
+        return tasks_local
+
+    if args.no_rich:
+        console.print(f"Listados: {len(listings)}")
+        for i, listing in enumerate(listings, 1):
             listing_id = listing["listing_id"]
             name = listing["Establecimiento"] or listing_id
-            console.rule(f"[cyan]{name}[/] ({listing_id})")
+            console.print(f"[{i}/{len(listings)}] {name} ({listing_id})")
             try:
                 cal = fetch_calendar(
                     session,
@@ -184,11 +156,16 @@ def main(argv: Optional[List[str]] = None) -> int:
                     retries=args.retries,
                     delay=args.delay,
                 )
-            except Exception as exc:  # noqa
+            except requests.RequestException as exc:
                 console.print(f"[red]Error calendario:[/] {exc}")
-                progress.advance(task)
                 continue
             daymap = build_daymap(cal)
+            out_dir = args.output_dir
+            out_dir.mkdir(parents=True, exist_ok=True)
+            output_path = (
+                out_dir / f"{name.replace(' ', '_')}_{start_date}_{end_date}.csv"
+            )
+            existing_rows = load_existing_rows(output_path)
             rows = build_rows(
                 session,
                 listing_id,
@@ -200,29 +177,98 @@ def main(argv: Optional[List[str]] = None) -> int:
                 args.locale,
                 args.delay,
                 args.retries,
+                args.cache_hours,
+                existing_rows,
+                max_workers=args.max_workers,
             )
-            out_dir = args.output_dir
-            out_dir.mkdir(parents=True, exist_ok=True)
-            from price_monitor.core.io_csv import CSV_COLUMNS
-
-            output_path = out_dir / f"{name.replace(' ', '_')}_{start_date}_{end_date}.csv"
-            # Minimal write without caching reuse for this MVP CLI wrapper
-            from datetime import datetime
-            from csv import writer
-
-            with output_path.open("w", encoding="utf-8", newline="") as handle:
-                handle.write(f"# Listing: {name}\n")
-                handle.write(f"# Listing ID: {listing_id}\n")
-                handle.write(f"# Listing URL: https://www.airbnb.com.ar/rooms/{listing_id}\n")
-                handle.write(f"# Period: {start_date} to {end_date}\n")
-                handle.write(f"# Guests: {args.guests}\n")
-                handle.write(f"# Generated: {datetime.now().isoformat()}\n")
-                handle.write("#\n")
-                w = writer(handle)
-                w.writerow(CSV_COLUMNS)
-                w.writerows(rows)
+            write_csv(
+                output_path,
+                name,
+                listing_id,
+                f"https://www.airbnb.com.ar/rooms/{listing_id}",
+                start_date,
+                end_date,
+                args.guests,
+                rows,
+                args.cache_hours,
+                existing_rows,
+            )
             console.print(f"[green]OK[/] {output_path}")
-            progress.advance(task)
+    else:
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[bold blue]Scrape[/]"),
+            BarColumn(),
+            TextColumn("{task.completed}/{task.total}"),
+            TimeElapsedColumn(),
+            TimeRemainingColumn(),
+            console=console,
+        ) as progress:
+            listings_task = progress.add_task("listings", total=len(listings))
+            for listing in listings:
+                listing_id = listing["listing_id"]
+                name = listing["Establecimiento"] or listing_id
+                console.rule(f"[cyan]{name}[/] ({listing_id})")
+                try:
+                    cal = fetch_calendar(
+                        session,
+                        listing_id,
+                        start_date.month,
+                        start_date.year,
+                        total_months,
+                        locale=args.locale,
+                        currency=args.currency,
+                        retries=args.retries,
+                        delay=args.delay,
+                    )
+                except requests.RequestException as exc:
+                    console.print(f"[red]Error calendario:[/] {exc}")
+                    progress.advance(listings_task)
+                    continue
+                daymap = build_daymap(cal)
+                tasks_estimate = estimate_booking_tasks(daymap)
+                booking_task = None
+                if tasks_estimate:
+                    booking_task = progress.add_task(
+                        f"booking:{name}", total=tasks_estimate
+                    )
+                out_dir = args.output_dir
+                out_dir.mkdir(parents=True, exist_ok=True)
+                output_path = (
+                    out_dir / f"{name.replace(' ', '_')}_{start_date}_{end_date}.csv"
+                )
+                existing_rows = load_existing_rows(output_path)
+                rows = build_rows(
+                    session,
+                    listing_id,
+                    start_date,
+                    end_date,
+                    args.guests,
+                    daymap,
+                    args.currency,
+                    args.locale,
+                    args.delay,
+                    args.retries,
+                    args.cache_hours,
+                    existing_rows,
+                    max_workers=args.max_workers,
+                    rich_progress=progress if booking_task is not None else None,
+                    progress_task_id=booking_task,
+                )
+                write_csv(
+                    output_path,
+                    name,
+                    listing_id,
+                    f"https://www.airbnb.com.ar/rooms/{listing_id}",
+                    start_date,
+                    end_date,
+                    args.guests,
+                    rows,
+                    args.cache_hours,
+                    existing_rows,
+                )
+                console.print(f"[green]OK[/] {output_path}")
+                progress.advance(listings_task)
     return 0
 
 
