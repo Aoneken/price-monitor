@@ -22,11 +22,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, joinedload
 
 from webapp import crud
-from webapp.database import (
-    SessionLocal,
-    get_db,
-    init_db,
-)
+from webapp.database import SessionLocal, get_db, init_db
 from webapp.logging_config import init_logging
 from webapp.models import Listing, PlatformSource, ScrapeJob, Workspace
 from webapp.schemas import (
@@ -596,6 +592,7 @@ def get_prices_by_date(
     Returns data suitable for Chart.js time series.
     """
     from sqlalchemy import func
+
     from webapp.models import PriceRecord
 
     query = db.query(
@@ -638,6 +635,7 @@ def get_prices_by_establishment(
     Returns data suitable for Chart.js bar/pie charts.
     """
     from sqlalchemy import func
+
     from webapp.models import PriceRecord
 
     query = (

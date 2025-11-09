@@ -8,8 +8,8 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from webapp.database import SessionLocal
-from webapp.models import Listing, PlatformSource
+from webapp.database import SessionLocal  # noqa: E402
+from webapp.models import Listing, PlatformSource  # noqa: E402
 
 
 def extract_id_from_url(url, platform):

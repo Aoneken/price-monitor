@@ -6,8 +6,8 @@ import requests
 from sqlalchemy.orm import Session
 
 from price_monitor.core.calendar import build_daymap, fetch_calendar, month_count
-from price_monitor.providers.airbnb import COMMON_HEADERS
 from price_monitor.core.rows import build_rows
+from price_monitor.providers.airbnb import COMMON_HEADERS
 from webapp.models import (
     Listing,
     PlatformSource,

@@ -65,7 +65,7 @@ def select_listings_by_tokens(
         return list(listings)
 
     selected: List[Dict[str, str]] = []
-    seen_ids = set()
+    seen_ids: set[str] = set()
 
     for token in tokens:
         # Ignorar stopwords muy frecuentes para reducir ambigüedad
