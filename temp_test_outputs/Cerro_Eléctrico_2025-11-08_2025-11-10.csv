@@ -1,0 +1,12 @@
+# Listing: Cerro Eléctrico
+# Listing ID: 39250879
+# Listing URL: https://www.airbnb.com.ar/rooms/39250879
+# Period: 2025-11-08 to 2025-11-10
+# Guests: 2
+# Generated: 2025-11-09T14:34:57.687524
+# Cache Hours: 0.0
+#
+date,available,availableForCheckin,availableForCheckout,bookable,minNights,maxNights,pricePerNight,priceBasisNights,stayTotal,currency,insertedAt,notes
+2025-11-08,False,False,False,,2,1125,,,,USD,2025-11-09T14:34:57.681964,min_stay=2;unavailable
+2025-11-09,False,False,False,False,2,1125,,,,USD,2025-11-09T14:34:57.681964,min_stay=2;unavailable
+2025-11-10,False,False,False,False,2,1125,,,,USD,2025-11-09T14:34:57.681964,min_stay=2;unavailable

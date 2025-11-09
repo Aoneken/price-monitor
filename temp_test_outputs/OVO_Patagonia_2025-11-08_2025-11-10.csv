@@ -1,0 +1,12 @@
+# Listing: OVO Patagonia
+# Listing ID: 1312689251939122522
+# Listing URL: https://www.airbnb.com.ar/rooms/1312689251939122522
+# Period: 2025-11-08 to 2025-11-10
+# Guests: 2
+# Generated: 2025-11-09T14:34:53.275685
+# Cache Hours: 0.0
+#
+date,available,availableForCheckin,availableForCheckout,bookable,minNights,maxNights,pricePerNight,priceBasisNights,stayTotal,currency,insertedAt,notes
+2025-11-08,False,False,False,,1,2,,,,USD,2025-11-09T14:34:53.269897,min_stay=1;unavailable
+2025-11-09,False,False,False,False,1,2,,,,USD,2025-11-09T14:34:53.269897,min_stay=1;unavailable
+2025-11-10,False,False,False,False,1,2,,,,USD,2025-11-09T14:34:53.269897,min_stay=1;unavailable

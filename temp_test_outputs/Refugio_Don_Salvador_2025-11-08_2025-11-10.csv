@@ -1,0 +1,12 @@
+# Listing: Refugio Don Salvador
+# Listing ID: 984157675633929889
+# Listing URL: https://www.airbnb.com.ar/rooms/984157675633929889
+# Period: 2025-11-08 to 2025-11-10
+# Guests: 2
+# Generated: 2025-11-09T14:34:49.056677
+# Cache Hours: 0.0
+#
+date,available,availableForCheckin,availableForCheckout,bookable,minNights,maxNights,pricePerNight,priceBasisNights,stayTotal,currency,insertedAt,notes
+2025-11-08,False,False,False,,1,365,,,,USD,2025-11-09T14:34:44.612433,min_stay=1;unavailable
+2025-11-09,True,True,False,True,1,365,168.89,1,168.89,USD,2025-11-09T14:34:47.638909,"min_stay=1;no_checkout;total_fmt=$168,89USD;base_fmt=$148,00USD;service_fmt=$20,89USD;base_total=148.00;service_total=20.89"
+2025-11-10,True,True,True,True,1,365,168.89,1,168.89,USD,2025-11-09T14:34:49.049831,"min_stay=1;total_fmt=$168,89USD;base_fmt=$148,00USD;service_fmt=$20,89USD;base_total=148.00;service_total=20.89"
