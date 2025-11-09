@@ -3,264 +3,510 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Price Monitor</title>
+    <title>Price Monitor - Professional Dashboard</title>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          sans-serif;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
-        padding: 2rem;
-      }
-      .container {
-        max-width: 1200px;
-        margin: 0 auto;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        overflow: hidden;
-      }
-      header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 2rem;
-        text-align: center;
-      }
-      h1 {
-        font-size: 2.5rem;
-        margin-bottom: 0.5rem;
-      }
-      .subtitle {
-        opacity: 0.9;
-        font-size: 1.1rem;
-      }
-      .content {
-        padding: 2rem;
-      }
-
-      .add-listing {
-        background: #f7fafc;
-        padding: 2rem;
-        border-radius: 12px;
-        margin-bottom: 2rem;
-      }
-      .form-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1rem;
-        margin-bottom: 1rem;
-      }
-      input,
-      select,
-      button {
-        padding: 0.75rem;
-        border: 2px solid #e2e8f0;
-        border-radius: 8px;
-        font-size: 1rem;
-      }
-      input:focus,
-      select:focus {
-        outline: none;
-        border-color: #667eea;
-      }
-      button {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        cursor: pointer;
-        font-weight: 600;
-        transition: transform 0.2s;
-      }
-      button:hover {
-        transform: translateY(-2px);
-      }
-      button:active {
-        transform: translateY(0);
-      }
-
-      .listings-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 1.5rem;
-      }
-      .listing-card {
-        background: white;
-        border: 2px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 1.5rem;
-        transition: all 0.3s;
-      }
-      .listing-card:hover {
-        border-color: #667eea;
-        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
-        transform: translateY(-4px);
-      }
-      .listing-name {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: #2d3748;
-        margin-bottom: 0.5rem;
-      }
-      .listing-id {
-        color: #718096;
-        font-size: 0.875rem;
-        margin-bottom: 1rem;
-      }
-      .listing-actions {
-        display: flex;
-        gap: 0.5rem;
-      }
-      .btn-small {
-        padding: 0.5rem 1rem;
-        font-size: 0.875rem;
-        flex: 1;
-      }
-      .btn-secondary {
-        background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-      }
-
-      .scrape-form {
-        background: #f7fafc;
-        padding: 1rem;
-        border-radius: 8px;
-        margin-top: 1rem;
-        display: none;
-      }
-      .scrape-form.active {
-        display: block;
-      }
-
-      .status {
-        display: inline-block;
-        padding: 0.25rem 0.75rem;
-        border-radius: 12px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-      }
-      .status-pending {
-        background: #fef3c7;
-        color: #92400e;
-      }
-      .status-running {
-        background: #dbeafe;
-        color: #1e40af;
-      }
-      .status-completed {
-        background: #d1fae5;
-        color: #065f46;
-      }
-      .status-failed {
-        background: #fee2e2;
-        color: #991b1b;
-      }
-
-      .empty-state {
-        text-align: center;
-        padding: 4rem 2rem;
-        color: #718096;
-      }
-      .empty-state h3 {
-        font-size: 1.5rem;
-        margin-bottom: 0.5rem;
-        color: #2d3748;
-      }
-    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
-    <div class="container">
-      <header>
-        <h1>🏠 Price Monitor</h1>
-        <p class="subtitle">Monitoreo de precios de Airbnb en tiempo real</p>
+    <div class="app-container">
+      <!-- Header with Focus Selector -->
+      <header class="app-header">
+        <div class="header-left">
+          <h1 class="app-title">
+            <span class="logo">📊</span>
+            <span>Price Monitor</span>
+          </h1>
+          <div class="focus-selector">
+            <label for="focus-select">Workspace:</label>
+            <select id="focus-select" class="focus-dropdown">
+              <option value="">Seleccionar...</option>
+            </select>
+          </div>
+          <div class="focus-selector">
+            <label for="season-select">Temporada:</label>
+            <select id="season-select" class="focus-dropdown">
+              <option value="">Seleccionar...</option>
+            </select>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-primary" onclick="openNewFocusModal()">
+            <span class="btn-icon">➕</span>
+            <span>Nuevo Workspace</span>
+          </button>
+        </div>
       </header>
 
-      <div class="content">
-        <div class="add-listing">
-          <h2 style="margin-bottom: 1rem">➕ Agregar Establecimiento</h2>
-          <form
-            hx-post="/api/listings"
-            hx-target="#listings"
-            hx-swap="beforeend"
-          >
-            <div class="form-grid">
-              <input
-                type="text"
-                name="listing_id"
-                placeholder="ID de Airbnb"
-                required
-              />
-              <input
-                type="text"
-                name="name"
-                placeholder="Nombre del establecimiento"
-                required
-              />
-              <input type="url" name="url" placeholder="URL (opcional)" />
-            </div>
-            <button type="submit">Agregar Establecimiento</button>
-          </form>
+      <!-- Stats Cards -->
+      <div id="stats-cards" class="stats-grid" style="display: none">
+        <div class="stat-card">
+          <div class="stat-icon">🏠</div>
+          <div class="stat-content">
+            <div class="stat-label">Establecimientos</div>
+            <div class="stat-value" id="stat-listings">0</div>
+          </div>
         </div>
+        <div class="stat-card">
+          <div class="stat-icon">📅</div>
+          <div class="stat-content">
+            <div class="stat-label">Temporadas</div>
+            <div class="stat-value" id="stat-seasons">0</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🔍</div>
+          <div class="stat-content">
+            <div class="stat-label">Scrapes Activos</div>
+            <div class="stat-value" id="stat-jobs">0</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📊</div>
+          <div class="stat-content">
+            <div class="stat-label">Precios Capturados</div>
+            <div class="stat-value" id="stat-prices">0</div>
+          </div>
+        </div>
+      </div>
 
-        <h2 style="margin-bottom: 1rem">📋 Establecimientos</h2>
-        <div id="listings" class="listings-grid">
-          {% if listings %} {% for listing in listings %}
-          <div class="listing-card">
-            <div class="listing-name">{{ listing.name }}</div>
-            <div class="listing-id">ID: {{ listing.listing_id }}</div>
-            <div class="listing-actions">
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Tab Navigation -->
+        <nav class="tabs" role="tablist">
+          <button
+            class="tab active"
+            role="tab"
+            onclick="switchTab('config', event)"
+          >
+            <span class="tab-icon">⚙️</span>
+            <span>Configuración</span>
+          </button>
+          <button class="tab" role="tab" onclick="switchTab('scraping', event)">
+            <span class="tab-icon">🔍</span>
+            <span>Scraping</span>
+          </button>
+          <button class="tab" role="tab" onclick="switchTab('jobs', event)">
+            <span class="tab-icon">📋</span>
+            <span>Jobs</span>
+          </button>
+          <button class="tab" role="tab" onclick="switchTab('database', event)">
+            <span class="tab-icon">🗄️</span>
+            <span>Base de Datos</span>
+          </button>
+          <button
+            class="tab"
+            role="tab"
+            onclick="switchTab('analytics', event)"
+          >
+            <span class="tab-icon">📈</span>
+            <span>Análisis</span>
+          </button>
+        </nav>
+
+        <!-- Tab Contents -->
+        <div id="main-content">
+          <!-- Configuration Tab -->
+          <div id="config-tab" class="tab-content active">
+            <div class="subtab-nav">
               <button
-                class="btn-small"
-                onclick="toggleScrapeForm({{ listing.id }})"
+                class="subtab-btn active"
+                onclick="switchConfigSubtab('settings', event)"
               >
-                🔍 Scrape
+                ⚙️ Ajustes
               </button>
-              <a href="/listing/{{ listing.id }}" style="flex: 1">
-                <button class="btn-small btn-secondary" style="width: 100%">
-                  📊 Ver Precios
-                </button>
-              </a>
-            </div>
-            <div id="scrape-form-{{ listing.id }}" class="scrape-form">
-              <form
-                hx-post="/api/scrape"
-                hx-trigger="submit"
-                hx-swap="afterbegin"
-                hx-target="#job-status-{{ listing.id }}"
+              <button
+                class="subtab-btn"
+                onclick="switchConfigSubtab('seasons', event)"
               >
-                <input
-                  type="hidden"
-                  name="listing_id"
-                  value="{{ listing.id }}"
-                />
-                <input type="date" name="start_date" required />
-                <input type="date" name="end_date" required />
-                <input type="number" name="guests" value="2" min="1" max="16" />
-                <button type="submit">Iniciar Scrape</button>
-              </form>
-              <div id="job-status-{{ listing.id }}"></div>
+                📅 Temporadas
+              </button>
+              <button
+                class="subtab-btn"
+                onclick="switchConfigSubtab('listings', event)"
+              >
+                🏠 Establecimientos
+              </button>
+            </div>
+
+            <div id="config-settings" class="subtab-content active">
+              <div class="empty-state">
+                <div class="empty-state-icon">🎯</div>
+                <h3>Selecciona o crea un Workspace</h3>
+                <p>
+                  Los workspaces te permiten organizar tus temporadas y
+                  establecimientos.
+                </p>
+                <button class="btn btn-primary" onclick="openNewFocusModal()">
+                  ➕ Crear Primer Workspace
+                </button>
+              </div>
+            </div>
+
+            <div id="config-seasons" class="subtab-content"></div>
+            <div id="config-listings" class="subtab-content"></div>
+          </div>
+
+          <!-- Scraping Tab -->
+          <div id="scraping-tab" class="tab-content">
+            <div class="content-section">
+              <h2>🔍 Lanzar Nuevo Scrape</h2>
+              <p class="text-muted">
+                Selecciona establecimientos y configura parámetros para iniciar
+                la captura de precios.
+              </p>
+
+              <div class="scraping-panel">
+                <div class="scraping-form">
+                  <h3>Selección de Establecimientos</h3>
+                  <div
+                    id="scraping-listings-selector"
+                    class="listings-selector"
+                  >
+                    <p class="text-muted">Selecciona un workspace primero...</p>
+                  </div>
+
+                  <h3 style="margin-top: 2rem">Parámetros</h3>
+                  <form id="bulk-scrape-form">
+                    <div class="form-grid">
+                      <div class="form-group">
+                        <label>Fecha Inicio *</label>
+                        <input type="date" id="bulk-start" required />
+                      </div>
+                      <div class="form-group">
+                        <label>Fecha Fin *</label>
+                        <input type="date" id="bulk-end" required />
+                      </div>
+                      <div class="form-group">
+                        <label>Huéspedes</label>
+                        <input
+                          type="number"
+                          id="bulk-guests"
+                          value="2"
+                          min="1"
+                        />
+                      </div>
+                      <div class="form-group">
+                        <label>Plataforma</label>
+                        <select id="bulk-provider">
+                          <option value="airbnb">Airbnb (soportado)</option>
+                          <option value="booking" disabled>
+                            Booking (sin soporte)
+                          </option>
+                          <option value="expedia" disabled>
+                            Expedia (sin soporte)
+                          </option>
+                        </select>
+                      </div>
+                      <div class="form-group">
+                        <label>Moneda</label>
+                        <select id="bulk-currency">
+                          <option value="USD">USD</option>
+                          <option value="ARS">ARS</option>
+                          <option value="EUR">EUR</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="form-actions">
+                      <button type="submit" class="btn btn-primary btn-large">
+                        <span class="btn-icon">▶️</span>
+                        <span>Iniciar Scrape</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
             </div>
           </div>
-          {% endfor %} {% else %}
-          <div class="empty-state">
-            <h3>No hay establecimientos</h3>
-            <p>Agrega tu primer establecimiento usando el formulario arriba</p>
+
+          <!-- Jobs Tab -->
+          <div id="jobs-tab" class="tab-content">
+            <div class="content-section">
+              <div class="section-header">
+                <h2>📋 Historial de Jobs</h2>
+                <button class="btn btn-secondary" onclick="loadJobs()">
+                  <span>🔄</span>
+                  <span>Actualizar</span>
+                </button>
+              </div>
+
+              <div id="jobs-list" class="jobs-grid">
+                <p class="text-muted">Cargando...</p>
+              </div>
+            </div>
           </div>
-          {% endif %}
+
+          <!-- Database Tab -->
+          <div id="database-tab" class="tab-content">
+            <div class="content-section">
+              <h2>🗄️ Explorador de Base de Datos</h2>
+
+              <div class="db-controls">
+                <div class="db-filters">
+                  <div class="form-group">
+                    <label>Tabla</label>
+                    <select id="db-table" onchange="loadDatabaseTable()">
+                      <option value="prices">📊 Registros de Precios</option>
+                      <option value="listings">🏠 Establecimientos</option>
+                      <option value="jobs">📋 Jobs de Scraping</option>
+                      <option value="seasons">📅 Temporadas</option>
+                      <option value="workspaces">🏢 Workspaces</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group" id="db-listing-filter">
+                    <label>Establecimiento</label>
+                    <select id="db-listing">
+                      <option value="">Todos</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group" id="db-date-start-filter">
+                    <label>Desde</label>
+                    <input type="date" id="db-date-start" />
+                  </div>
+
+                  <div class="form-group" id="db-date-end-filter">
+                    <label>Hasta</label>
+                    <input type="date" id="db-date-end" />
+                  </div>
+
+                  <button
+                    class="btn btn-primary"
+                    onclick="applyDatabaseFilters()"
+                  >
+                    <span>🔍</span>
+                    <span>Aplicar Filtros</span>
+                  </button>
+
+                  <button
+                    class="btn btn-success"
+                    onclick="exportDatabaseTable()"
+                  >
+                    <span>⬇️</span>
+                    <span>Exportar CSV</span>
+                  </button>
+
+                  <button
+                    class="btn btn-danger"
+                    onclick="deleteFilteredRecords()"
+                    title="Eliminar registros filtrados"
+                  >
+                    <span>🗑️</span>
+                    <span>Vaciar</span>
+                  </button>
+                </div>
+
+                <div class="db-custom-filters" id="db-custom-filters">
+                  <details>
+                    <summary>🔧 Filtros Avanzados</summary>
+                    <div class="custom-filter-builder">
+                      <div id="custom-filters-list"></div>
+                      <button
+                        class="btn btn-sm btn-secondary"
+                        onclick="addCustomFilter()"
+                      >
+                        ➕ Agregar Filtro
+                      </button>
+                    </div>
+                  </details>
+                </div>
+              </div>
+
+              <div class="db-info">
+                <span id="db-record-count">0 registros</span>
+                <span id="db-page-info">Página 1 de 1</span>
+              </div>
+
+              <div id="database-table" class="table-container">
+                <div class="loading">Cargando datos...</div>
+              </div>
+
+              <div class="db-pagination">
+                <button
+                  class="btn btn-sm"
+                  onclick="prevDatabasePage()"
+                  id="db-prev-btn"
+                  disabled
+                >
+                  ⬅️ Anterior
+                </button>
+                <span id="db-page-numbers"></span>
+                <button
+                  class="btn btn-sm"
+                  onclick="nextDatabasePage()"
+                  id="db-next-btn"
+                >
+                  Siguiente ➡️
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Analytics Tab -->
+          <div id="analytics-tab" class="tab-content">
+            <div class="content-section">
+              <h2>📈 Análisis de Precios</h2>
+
+              <div class="analytics-filters">
+                <div class="form-group">
+                  <label>Fecha Inicio</label>
+                  <input
+                    type="date"
+                    id="analytics-start"
+                    onchange="loadAnalytics()"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>Fecha Fin</label>
+                  <input
+                    type="date"
+                    id="analytics-end"
+                    onchange="loadAnalytics()"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>Plataforma</label>
+                  <select id="analytics-provider" onchange="loadAnalytics()">
+                    <option value="all">Todas</option>
+                    <option value="airbnb">Airbnb</option>
+                    <option value="booking">Booking</option>
+                    <option value="expedia">Expedia</option>
+                  </select>
+                </div>
+                <button class="btn btn-primary" onclick="loadAnalytics()">
+                  <span>🔍</span>
+                  <span>Actualizar</span>
+                </button>
+                <button class="btn btn-success" onclick="exportAnalyticsData()">
+                  <span>⬇️</span>
+                  <span>Exportar CSV</span>
+                </button>
+              </div>
+
+              <div class="analytics-listings-selector">
+                <h3>Establecimientos</h3>
+                <div id="analytics-listings-container">
+                  <!-- Checkboxes will be rendered here -->
+                </div>
+              </div>
+
+              <div class="chart-container">
+                <canvas id="analyticsChart"></canvas>
+              </div>
+
+              <div id="analytics-stats" class="analytics-stats">
+                <!-- Stats will be rendered here -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="new-focus-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>➕ Crear Nuevo Workspace</h3>
+          <button class="modal-close" onclick="closeModal('new-focus-modal')">
+            ✕
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="new-focus-form">
+            <div class="form-group">
+              <label for="workspace-name">Nombre del Workspace *</label>
+              <input
+                type="text"
+                id="workspace-name"
+                name="name"
+                placeholder="Ej: Patagonia 2025"
+                required
+              />
+            </div>
+            <div class="form-actions">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                onclick="closeModal('new-focus-modal')"
+              >
+                Cancelar
+              </button>
+              <button type="submit" class="btn btn-success">Crear</button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
 
-    <script>
-      function toggleScrapeForm(id) {
-        const form = document.getElementById(`scrape-form-${id}`);
-        form.classList.toggle("active");
-      }
-    </script>
+    <div id="delete-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>⚠️ Confirmar Eliminación</h3>
+          <button class="modal-close" onclick="closeModal('delete-modal')">
+            ✕
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-warning">
+            <span class="alert-icon">⚠️</span>
+            <div>
+              <strong>Esta acción no se puede deshacer.</strong>
+              <p id="delete-message" class="text-muted"></p>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="closeModal('delete-modal')"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              class="btn btn-danger"
+              onclick="confirmDelete()"
+            >
+              Eliminar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="scrape-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>🔍 Scrape en Progreso</h3>
+          <button class="modal-close" onclick="closeModal('scrape-modal')">
+            ✕
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="progress-section">
+            <div class="progress-bar">
+              <div id="scrape-progress" class="progress-fill"></div>
+            </div>
+            <div id="scrape-logs" class="logs-container"></div>
+          </div>
+          <div class="form-actions">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="closeModal('scrape-modal')"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast container -->
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+    <script src="/static/app.js"></script>
   </body>
 </html>

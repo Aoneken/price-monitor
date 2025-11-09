@@ -1,5 +1,6 @@
 from datetime import date
-from price_monitor.core.calendar import month_count, build_daymap
+
+from price_monitor.core.calendar import build_daymap, month_count
 
 
 def test_month_count_simple():

@@ -1,193 +1,379 @@
-# Price Monitor
+# 🏔️ Price Monitor - Patagonia
 
-Herramienta para extraer y monitorear precios de Airbnb con histórico, caching y soporte para múltiples establecimientos.
+Sistema de monitoreo de precios para establecimientos hoteleros en El Chaltén, Patagonia Argentina.
 
-## Instalación rápida
+## 📋 Descripción
+
+Price Monitor es una aplicación web completa que permite:
+- 📊 Scraping automatizado de precios de Airbnb
+- 📈 Análisis y visualización de curvas de precios
+- 🗄️ Almacenamiento histórico en base de datos SQLite
+- 🏠 Gestión de múltiples establecimientos y plataformas
+- 📅 Organización por temporadas y workspaces
+
+## 🚀 Inicio Rápido
+
+### Requisitos
+- Python 3.10+
+- pip
+
+### Instalación
 
 ```bash
-# Clonar y entrar al directorio
-git clone https://github.com/Aoneken/price-monitor
-cd price-monitor
-
-# Crear entorno virtual e instalar dependencias
+# 1. Crear entorno virtual
 python3 -m venv .venv
-source .venv/bin/activate  # En Windows: .venv\Scripts\activate
+
+# 2. Activar entorno virtual
+source .venv/bin/activate  # Linux/Mac
+# o
+.venv\Scripts\activate     # Windows
+
+# 3. Instalar dependencias
 pip install -r requirements.txt
 
-# Opcional: dependencias de desarrollo (pytest)
-pip install -r requirements-dev.txt
+# 4. Iniciar aplicación web
+python run_webapp.py
 ```
 
-## Uso básico
+La aplicación estará disponible en: `http://127.0.0.1:8000`
 
-### Ejecutar para un establecimiento
+## 📁 Estructura del Proyecto
+
+```
+price-monitor/
+├── price_monitor/          # Core del sistema de scraping
+│   ├── cli/               # CLI para ejecución manual
+│   ├── core/              # Lógica de negocio (calendar, models, selection)
+│   └── providers/         # Integraciones con plataformas (Airbnb)
+│
+├── webapp/                # Aplicación web FastAPI
+│   ├── static/           # CSS y JavaScript
+│   │   ├── app.js        # Lógica frontend completa
+│   │   └── styles.css    # Estilos Supabase-inspired
+│   ├── templates/        # Templates HTML
+│   │   └── index.html    # SPA principal
+│   ├── crud.py           # Operaciones de base de datos
+│   ├── database.py       # Configuración SQLAlchemy
+│   ├── main.py           # Endpoints FastAPI
+│   ├── models.py         # Modelos SQLAlchemy
+│   └── schemas.py        # Schemas Pydantic
+│
+├── scripts/              # Scripts de utilidad
+│   ├── add_missing_listings.py      # Importar establecimientos
+│   ├── scrape_real_prices.py        # Script de scraping standalone
+│   └── update_platform_sources.py   # Actualizar plataformas
+│
+├── tests/                # Suite de tests
+│   ├── unit/             # Tests unitarios
+│   └── integration/      # Tests de integración
+│
+├── data/                 # Datos de entrada
+│   └── establecimientos.csv  # Lista de establecimientos
+│
+├── logs/                 # Logs de la aplicación
+├── htmlcov/             # Reportes de cobertura
+│
+├── requirements.txt      # Dependencias de producción
+├── requirements-dev.txt  # Dependencias de desarrollo
+├── pyproject.toml       # Configuración del proyecto
+├── .flake8              # Configuración linting
+└── Makefile             # Comandos de desarrollo
+```
+
+## 🎯 Características Principales
+
+### 1. Gestión de Workspaces y Temporadas
+- Organiza establecimientos por workspace (ej: "Patagonia 2025")
+- Define temporadas con fechas de inicio/fin
+- Asigna establecimientos a cada workspace
+
+### 2. Multi-Plataforma
+Cada establecimiento puede tener múltiples fuentes:
+- ✅ **Airbnb** (soportado)
+- 🔜 **Booking.com** (próximamente)
+- 🔜 **Expedia** (próximamente)
+
+### 3. Scraping Inteligente
+- Selección de establecimientos por plataforma
+- Configuración de fechas y número de huéspedes
+- Progress tracking en tiempo real via WebSocket
+- Almacenamiento automático de resultados
+
+### 4. Analytics Avanzado
+- Gráficos interactivos con Chart.js
+- Curvas discontinuas cuando no hay datos
+- Comparación de múltiples establecimientos
+- Colores únicos por establecimiento (10 colores disponibles)
+- KPIs por establecimiento y totales generales
+- Filtrado por plataforma
+- Exportación a CSV
+
+### 5. Base de Datos Explorable
+- Vista de todas las tablas del sistema
+- Filtros avanzados por establecimiento, fechas, workspace
+- **Ordenamiento dinámico** por cualquier columna (clic en headers)
+- Paginación eficiente
+- Vaciado de datos filtrados
+
+## 🗄️ Modelo de Datos
+
+### Tablas Principales
+
+#### `workspaces`
+Contenedores lógicos para organizar establecimientos.
+
+#### `seasons`
+Temporadas definidas dentro de un workspace.
+
+#### `listings`
+Establecimientos (hoteles, cabañas, etc.)
+- Almacena datos básicos: nombre, ID, proveedor principal
+- Relacionado con múltiples plataformas via `platform_sources`
+
+#### `platform_sources`
+Fuentes de precio por plataforma para cada listing.
+- Campos: `platform` (airbnb/booking/expedia), `base_url`, `extra_data`
+- `extra_data.supported` indica si la plataforma es funcional
+
+#### `price_records`
+Registros históricos de precios.
+- Fecha, disponibilidad, precio por noche, total estadía
+- Min/max noches, check-in/out disponibilidad
+
+#### `scrape_jobs`
+Historial de trabajos de scraping.
+- Estado (pending, running, completed, failed)
+- Progress tracking y current_step
+- Vinculado a season y listing
+
+## 🛠️ Desarrollo
+
+### Comandos Make
 
 ```bash
-# Modo simple (sin barra de progreso Rich)
-.venv/bin/python -m price_monitor.cli.main \
-  --start 2025-12-01 \
-  --end 2025-12-15 \
-  --guests 2 \
-  --select "Viento" \
-  --cache-hours 6 \
-  --max-workers 4 \
-  --output-dir output \
-  --no-rich
+# Formatear código
+make format
 
-# Modo con barra de progreso Rich (por defecto)
-.venv/bin/python -m price_monitor.cli.main \
-  --start 2025-12-01 \
-  --end 2025-12-15 \
-  --guests 2 \
-  --select "Viento"
+# Linting
+make lint
+
+# Tests
+make test
+make test-unit
+make test-integration
+make test-coverage
+
+# Limpiar archivos temporales
+make clean
+
+# Ver cobertura en HTML
+make coverage-html
 ```
 
-### Opciones principales
+### Configuración de Python
 
-- `--start YYYY-MM-DD` — Fecha inicial del periodo
-- `--end YYYY-MM-DD` — Fecha final del periodo
-- `--guests N` — Número de huéspedes (default: 2)
-- `--select SELECTOR` — Seleccionar establecimiento(s):
-  - Por índice: `1` o rango `1-3`
-  - Por fragmento de nombre: `Viento`, `Cerro`
-- `--cache-hours HOURS` — Reutilizar datos recientes (default: 6)
-- `--max-workers N` — Hilos para consultas paralelas (default: 4)
-- `--output-dir PATH` — Directorio de salida (default: `output`)
-- `--no-rich` — Desactivar barra de progreso (modo texto)
-- `--json` — Generar JSON además de CSV
-- `--freeze-before YYYY-MM-DD` — Congelar filas anteriores a fecha dada
-- `--csv PATH` — Ruta al CSV de establecimientos (auto-detecta si no se especifica)
+El proyecto usa:
+- **Black** para formateo
+- **isort** para ordenar imports
+- **Flake8** para linting
+- **MyPy** para type checking
+- **Pytest** para testing
 
-### Usar el wrapper script
+### Tasks de VSCode
+
+Disponibles en `.vscode/tasks.json`:
+- `webapp: Start` - Inicia servidor web
+- `cli: Run Scraper` - Ejecuta scraping desde CLI
+- `test: All / Unit / Integration / Coverage`
+- `lint: flake8 / mypy`
+- `format: black / isort`
+
+## 📊 Uso del Sistema
+
+### 1. Configuración Inicial
+
+1. **Crear Workspace**
+   - Ir a pestaña "Configuración"
+   - Crear nuevo workspace (ej: "Patagonia 2025")
+
+2. **Agregar Establecimientos**
+   - Subtab "Establecimientos"
+   - Usar formulario o importar desde CSV
+
+3. **Crear Temporada**
+   - Subtab "Temporadas"
+   - Definir nombre, fechas inicio/fin
+
+### 2. Scraping de Precios
+
+1. **Ir a pestaña "Scraping"**
+2. **Seleccionar plataforma** (Airbnb por ahora)
+3. **Elegir establecimientos** (solo aparecen los con soporte para plataforma seleccionada)
+4. **Configurar parámetros**:
+   - Fechas de inicio y fin
+   - Número de huéspedes
+   - Moneda
+5. **Iniciar Scrape**
+6. **Monitorear progreso** en tiempo real
+
+### 3. Análisis de Datos
+
+**Pestaña "Análisis":**
+- Seleccionar fechas de análisis
+- Elegir plataforma (Todas/Airbnb/Booking/Expedia)
+- Marcar establecimientos a comparar
+- Ver gráfico con curvas de precios
+- Revisar KPIs por establecimiento
+- Exportar a CSV
+
+**Pestaña "Base de Datos":**
+- Seleccionar tabla a explorar
+- Aplicar filtros
+- **Ordenar por cualquier columna** (clic en header)
+- Exportar o vaciar datos
+
+### 4. Historial de Jobs
+
+**Pestaña "Jobs":**
+- Ver todos los trabajos de scraping
+- Estado y progreso de cada uno
+- Errores y tiempos de ejecución
+
+## 🎨 Interfaz de Usuario
+
+Diseño compacto inspirado en **Supabase**:
+- Paleta verde (`#3ecf8e` primary)
+- Espaciado reducido (13px base font)
+- Badges de colores para estados
+- Modales y tooltips informativos
+- Responsive y optimizado
+
+## 🔧 API Endpoints
+
+### Workspaces
+- `GET /api/workspaces` - Lista de workspaces
+- `POST /api/workspaces` - Crear workspace
+- `PUT /api/workspaces/{id}` - Actualizar workspace
+
+### Listings
+- `GET /api/listings` - Lista de establecimientos (incluye platform_sources)
+- `POST /api/listings` - Crear establecimiento
+- `GET /api/prices/{listing_id}` - Precios de un establecimiento
+
+### Scraping
+- `POST /api/scrape` - Iniciar scrape individual
+- `POST /api/seasons/{id}/scrape` - Scrape masivo por temporada
+- `WS /ws/scrape-jobs/{job_id}` - WebSocket para progreso
+
+### Database Explorer
+- `GET /api/database/prices` - Registros de precios (paginado, filtrable, ordenable)
+- `GET /api/database/listings` - Establecimientos (paginado, ordenable)
+- `GET /api/database/jobs` - Jobs (paginado, filtrable, ordenable)
+- `GET /api/database/seasons` - Temporadas (paginado, ordenable)
+- `DELETE /api/database/{table}` - Vaciar datos filtrados
+
+### Analytics
+- `GET /api/analytics/establishments` - Datos agrupados por establecimiento
+
+## 📝 Scripts Útiles
+
+### Importar Establecimientos desde CSV
 
 ```bash
-.venv/bin/python scripts/scrape_real_prices.py \
-  --start 2025-12-01 \
-  --end 2025-12-15 \
-  --select "Cerro Eléctrico" \
-  --json
+python scripts/add_missing_listings.py
 ```
 
-## Estructura de salida
-
-### CSV
-
-Cada archivo contiene:
-
-- Metadatos en comentarios (`#`)
-- Columnas: date, available, availableForCheckin, availableForCheckout, bookable, minNights, maxNights, pricePerNight, priceBasisNights, stayTotal, currency, insertedAt, notes
-
-Ejemplo:
-
-```csv
-# Listing: Viento de Glaciares
-# Listing ID: 1413234233737891700
-# Period: 2025-12-01 to 2025-12-15
-# Guests: 2
-# Cache Hours: 6.0
-#
-date,available,availableForCheckin,...
-2025-12-01,False,False,True,...
-```
-
-### JSON (opcional con `--json`)
-
-Array de objetos con las mismas columnas:
-
-```json
-[
-  {
-    "date": "2025-12-01",
-    "available": "False",
-    "pricePerNight": "",
-    ...
-  }
-]
-```
-
-## Caching y congelación
-
-- **Cache hours**: Reutiliza filas existentes dentro de la ventana temporal especificada
-- **Freeze before**: Preserva filas históricas anteriores a la fecha dada sin re-consultar
-- Las filas previas a "hoy" se congelan automáticamente
-
-## Testing
+### Actualizar Platform Sources
 
 ```bash
-# Ejecutar todos los tests
-.venv/bin/python -m pytest tests -v
+python scripts/update_platform_sources.py
+```
 
-# Solo tests unitarios
-.venv/bin/python -m pytest tests/unit -v
+Lee `data/establecimientos.csv` y pobla la tabla `platform_sources` con todas las URLs de cada plataforma.
 
-# Solo tests de integración
-.venv/bin/python -m pytest tests/integration -v
+### Scraping Standalone
+
+```bash
+python scripts/scrape_real_prices.py
+```
+
+## 🧪 Testing
+
+```bash
+# Todos los tests
+pytest tests/ -v
+
+# Solo unitarios
+pytest tests/unit/ -v
 
 # Con cobertura
-.venv/bin/python -m pytest tests --cov=price_monitor --cov-report=term-missing
+pytest tests/ --cov=price_monitor --cov=webapp --cov-report=html
+
+# Ver reporte de cobertura
+open htmlcov/index.html
 ```
 
-## Linting
+## 🐛 Troubleshooting
 
+### Error: "No module named 'webapp'"
 ```bash
-.venv/bin/python -m flake8 .
+# Asegúrate de estar en el directorio raíz y con venv activado
+cd /path/to/price-monitor
+source .venv/bin/activate
 ```
 
-O usa la tarea VS Code configurada: `Tasks: Run Task > lint`
-
-## Arquitectura
-
-```
-price_monitor/
-├── core/
-│   ├── calendar.py      # Fetch calendario Airbnb
-│   ├── io_csv.py        # Lectura/escritura CSV con freeze
-│   ├── models.py        # Modelos de datos
-│   ├── rows.py          # Builder principal (caching, concurrencia)
-│   └── selection.py     # Selección de establecimientos
-├── providers/
-│   └── airbnb.py        # GraphQL + scraping HTML precios
-└── cli/
-    └── main.py          # CLI unificado
-
-scripts/
-└── scrape_real_prices.py  # Wrapper conveniente
-
-tests/
-├── unit/                # Tests unitarios
-└── integration/         # Tests de integración
-```
-
-## Próximos pasos (roadmap)
-
-- [ ] Endpoint FastAPI para consulta de precios vía API REST
-- [ ] Persistencia en SQLite/PostgreSQL
-- [ ] Dashboard web con HTMX/Jinja2 o React
-- [ ] Alertas por cambios de precio
-- [ ] Soporte para Booking.com y otros providers
-
-## Solución de problemas
-
-### "No module named 'requests'" o similar
-
+### Base de datos corrupta
 ```bash
-.venv/bin/python -m pip install -r requirements.txt
+# Resetear base de datos
+rm price_monitor.db
+python -c "from webapp.database import init_db; init_db()"
 ```
 
-### Tests no se ejecutan
-
+### Puerto 8000 ocupado
 ```bash
-.venv/bin/python -m pip install -r requirements-dev.txt
+# Cambiar puerto en run_webapp.py
+# O matar proceso existente
+lsof -ti:8000 | xargs kill -9
 ```
 
-### El CSV de establecimientos no se encuentra
+## 📦 Dependencias Principales
 
-Especifica la ruta explícita:
+### Producción
+- **FastAPI** - Framework web
+- **SQLAlchemy** - ORM
+- **Pydantic** - Validación de datos
+- **Uvicorn** - ASGI server
+- **Playwright** - Web scraping
+- **httpx** - HTTP client
 
-```bash
---csv tests/Foco_01/Temp-25-26/establecimientos/establecimientos.csv
-```
+### Desarrollo
+- **pytest** - Testing framework
+- **black** - Code formatter
+- **flake8** - Linter
+- **mypy** - Type checker
+- **pytest-cov** - Coverage reporting
 
-## Licencia
+## 🚧 Próximas Mejoras
 
-MIT (pendiente)
+- [ ] Soporte completo para Booking.com
+- [ ] Soporte completo para Expedia
+- [ ] Alertas de cambios de precio
+- [ ] Dashboard de comparación de competencia
+- [ ] API REST pública
+- [ ] Autenticación y usuarios
+- [ ] Integración con Google Sheets/Excel
+- [ ] Notificaciones por email/Slack
+- [ ] Despliegue en Docker
+
+## 📄 Licencia
+
+Proyecto interno - Uso privado
+
+## 👤 Autor
+
+Desarrollado para monitoreo de precios en El Chaltén, Patagonia.
+
+---
+
+**Última actualización:** Noviembre 2025
+**Estado:** ✅ Producción - Sistema funcional completo

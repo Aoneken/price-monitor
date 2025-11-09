@@ -1,44 +1,58 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Debug Streamlit App",
-            "type": "python",
-            "request": "launch",
-            "module": "streamlit",
-            "args": [
-                "run",
-                "${workspaceFolder}/app.py",
-                "--server.port=8501",
-                "--server.headless=true"
-            ],
-            "console": "integratedTerminal",
-            "justMyCode": false,
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            }
-        },
-        {
-            "name": "Debug E2E Tests",
-            "type": "python",
-            "request": "launch",
-            "program": "${workspaceFolder}/tests/test_e2e.py",
-            "console": "integratedTerminal",
-            "justMyCode": false,
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            }
-        },
-        {
-            "name": "Debug Platform Tests",
-            "type": "python",
-            "request": "launch",
-            "program": "${workspaceFolder}/tests/test_scraping_plataformas.py",
-            "console": "integratedTerminal",
-            "justMyCode": false,
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            }
-        }
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Webapp: Debug",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "webapp.main:app",
+        "--reload",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000"
+      ],
+      "jinja": true,
+      "console": "integratedTerminal",
+      "justMyCode": false
+    },
+    {
+      "name": "CLI: Debug Scraper",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "price_monitor.cli.main",
+      "args": [
+        "--start",
+        "2025-12-01",
+        "--end",
+        "2025-12-05",
+        "--guests",
+        "2",
+        "--select",
+        "Viento",
+        "--no-rich"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Python: Current File",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Python: Debug Tests",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["${file}", "-v", "-s"],
+      "console": "integratedTerminal",
+      "justMyCode": false
+    }
+  ]
 }

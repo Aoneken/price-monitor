@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import time
 import random
+import time
 from datetime import date
 from typing import Any, Dict
 from urllib.parse import urlencode
@@ -9,8 +9,8 @@ from urllib.parse import urlencode
 import requests
 
 from price_monitor.providers.airbnb import (
-    GRAPHQL_BASE,
     CALENDAR_HASH,
+    GRAPHQL_BASE,
     json_dumps_compact,
 )
 
@@ -69,14 +69,28 @@ def fetch_calendar(
 
 
 def build_daymap(calendar_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Build a date-keyed map from calendar data.
+
+    Args:
+        calendar_data: Calendar data from fetch_calendar(), or None if fetch failed
+
+    Returns:
+        Dictionary mapping dates to day data
+    """
+    if not calendar_data:
+        return {}
+
+    data_section = calendar_data.get("data")
+    if not data_section:
+        return {}
+
     months = (
-        calendar_data.get("data", {})
-        .get("merlin", {})
+        data_section.get("merlin", {})
         .get("pdpAvailabilityCalendar", {})
         .get("calendarMonths", [])
     )
     daymap: Dict[str, Any] = {}
-    for month in months:
+    for month in months or []:
         for day in month.get("days", []):
             key = day.get("calendarDate")
             if key:

@@ -2,8 +2,8 @@ from datetime import date, timedelta
 
 import pytest
 
-from price_monitor.core.rows import build_rows
 from price_monitor.core.io_csv import CSV_COLUMNS
+from price_monitor.core.rows import build_rows
 
 
 @pytest.fixture()

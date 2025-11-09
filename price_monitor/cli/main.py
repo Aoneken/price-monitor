@@ -1,32 +1,31 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from datetime import date, timedelta
 from pathlib import Path
-from typing import List, Optional, Dict, Any
-import json
+from typing import Any, Dict, List, Optional
 
 import requests
 from rich.console import Console
 from rich.progress import (
+    BarColumn,
     Progress,
     SpinnerColumn,
-    BarColumn,
     TextColumn,
     TimeElapsedColumn,
     TimeRemainingColumn,
 )
 
-from price_monitor.core.calendar import month_count, fetch_calendar, build_daymap
+from price_monitor.core.calendar import build_daymap, fetch_calendar, month_count
+from price_monitor.core.io_csv import CSV_COLUMNS, load_existing_rows, write_csv
+from price_monitor.core.rows import build_rows
 from price_monitor.core.selection import (
     parse_establecimientos_csv,
     select_listings_by_tokens,
 )
-from price_monitor.core.io_csv import load_existing_rows, write_csv, CSV_COLUMNS
-from price_monitor.core.rows import build_rows
 from price_monitor.providers.airbnb import COMMON_HEADERS
-
 
 # CLI -------------------------------------------------------------------------
 
@@ -88,8 +87,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     csv_path = args.csv
     if not csv_path:
         candidates = [
-            Path("tests/Foco_01/Temp-25-26/establecimientos/establecimientos.csv"),
-            Path("Foco_01/Temp-25-26/establecimientos/establecimientos.csv"),
+            Path("data/establecimientos.csv"),
+            Path("tests/fixtures/establecimientos.csv"),
+            Path("establecimientos.csv"),
         ]
         for c in candidates:
             if c.exists():
@@ -106,7 +106,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     listings = all_listings
     if args.listing_id:
         ids = set(x.strip() for x in args.listing_id)
-        listings = [l for l in listings if l["listing_id"] in ids]
+        listings = [lst for lst in listings if lst["listing_id"] in ids]
         if not listings:
             print("IDs no presentes en CSV", file=sys.stderr)
             return 1

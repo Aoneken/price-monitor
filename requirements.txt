@@ -1,2 +1,4 @@
-requests>=2.31.0,<3
-rich>=13.7.0,<14
+# Production dependencies (web application)
+# For CLI only, use: pip install -r requirements/base.txt
+# For full webapp, use this file (default)
+-r requirements/web.txt

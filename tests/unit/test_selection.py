@@ -14,7 +14,7 @@ def test_select_by_index():
 
 def test_select_by_range():
     sel = select_listings_by_tokens(listings, "1-2")
-    assert [l["listing_id"] for l in sel] == ["1", "2"]
+    assert [lst["listing_id"] for lst in sel] == ["1", "2"]
 
 
 def test_select_by_name_fragment():

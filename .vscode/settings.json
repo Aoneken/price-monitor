@@ -1,78 +1,88 @@
 {
-  // --- Configuración Esencial de Python (Tus configuraciones) ---
+  // Python Configuration
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+
+  // Testing
   "python.testing.pytestEnabled": true,
-  "python.testing.pytestArgs": ["tests"],
+  "python.testing.pytestArgs": ["tests", "-v"],
+  "python.testing.unittestEnabled": false,
+
+  // Linting
   "python.linting.enabled": true,
   "python.linting.pylintEnabled": false,
   "python.linting.flake8Enabled": true,
+  "python.linting.flake8Args": ["--config=.flake8"],
+
+  // Formatting
   "python.formatting.provider": "black",
-  "autoDocstring.docstringFormat": "google",
+  "python.formatting.blackArgs": ["--line-length=88"],
+
+  // Type Checking
   "python.analysis.typeCheckingMode": "basic",
   "python.analysis.autoImportCompletions": true,
 
-  // --- AÑADIDO: Contexto de Testing Más Explícito ---
-  // Ayuda a la IA y al Test Explorer a encontrar pruebas de forma fiable
-  "python.testing.pytestPattern": "test_*.py",
-
-  // --- Configuración Específica del Lenguaje (Tu configuración, excelente práctica) ---
+  // Language-specific
   "[python]": {
     "editor.defaultFormatter": "ms-python.black-formatter",
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
       "source.organizeImports": "explicit"
     },
-    // AÑADIDO: Asegura 4 espacios para Python, anulando cualquier configuración de usuario
     "editor.tabSize": 4,
-    "editor.insertSpaces": true
+    "editor.insertSpaces": true,
+    "editor.rulers": [88]
   },
 
-  // --- AÑADIDO: Configuración para otros archivos comunes del proyecto ---
   "[json]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnSave": true,
     "editor.tabSize": 2
   },
+
   "[jsonc]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnSave": true,
     "editor.tabSize": 2
   },
+
   "[markdown]": {
     "editor.formatOnSave": true,
     "editor.wordWrap": "on",
     "files.trimTrailingWhitespace": false
   },
 
-  // --- Configuración General del Editor ---
-  "editor.formatOnSave": true, // Mantenido para archivos sin anulaciones específicas
-  // AÑADIDO: Limpia el contexto de la IA en todos los archivos
+  // Editor
+  "editor.formatOnSave": true,
   "files.trimTrailingWhitespace": true,
   "files.insertFinalNewline": true,
 
-  // --- Exclusiones de Archivos (Tu configuración, vital para el contexto de la IA) ---
+  // Exclusions
   "files.exclude": {
     "**/__pycache__": true,
     "**/*.pyc": true,
     ".pytest_cache": true,
     "**/.DS_Store": true,
-    "**/.venv": true // AÑADIDO: Oculta.venv del explorador
+    "htmlcov": true,
+    ".coverage": true
   },
+
   "files.watcherExclude": {
     "**/__pycache__/**": true,
     "**/node_modules/**": true,
-    "**/.venv/**": true
+    "**/.venv/**": true,
+    "**/.git/**": true
   },
-  // AÑADIDO: Excluye directorios ruidosos de las búsquedas de @workspace
+
   "search.exclude": {
     "**/__pycache__": true,
     ".pytest_cache": true,
     "**/.venv": true,
     "**/node_modules": true,
-    "**/bower_components": true
+    "htmlcov": true,
+    ".coverage": true
   },
 
-  // --- Configuración de Terminal (Tu configuración) ---
+  // Terminal
   "terminal.integrated.env.linux": {
     "PYTHONPATH": "${workspaceFolder}"
   },
@@ -82,8 +92,4 @@
   "terminal.integrated.env.windows": {
     "PYTHONPATH": "${workspaceFolder}"
   }
-
-  // --- Configuración obsoleta eliminada (ya no es necesaria) ---
-  // "python-envs.defaultEnvManager": "ms-python.python:system", (obsoleto)
-  // "python-envs.pythonProjects": (obsoleto)
 }

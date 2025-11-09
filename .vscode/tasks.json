@@ -1,62 +1,303 @@
 {
   "version": "2.0.0",
   "tasks": [
+    // ============================================
+    // Application Tasks
+    // ============================================
     {
-      "label": "lint",
+      "label": "webapp: Start",
       "type": "shell",
-      // Ejecuta flake8 usando el intérprete del workspace
-      "command": "${config:python.defaultInterpreterPath}",
-      "args": ["-m", "flake8", "."],
-      "group": "test",
-      "presentation": {
-        "reveal": "always",
-        "panel": "new"
-      },
-      "problemMatcher": ["$flake8"]
-    },
-    {
-      "label": "test",
-      "type": "shell",
-      // Ejecuta pytest usando el intérprete del workspace
-      "command": "${config:python.defaultInterpreterPath}",
-      "args": [
-        "-m",
-        "pytest",
-        "${config:python.testing.pytestArgs}" // Usa tus args de settings.json
-      ],
-      "group": {
-        "kind": "test",
-        "isDefault": true
-      },
-      "presentation": {
-        "reveal": "always",
-        "panel": "new"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "run-webapp",
-      "type": "shell",
-      "command": "${config:python.defaultInterpreterPath}",
+      "command": "${workspaceFolder}/.venv/bin/python",
       "args": ["run_webapp.py"],
       "isBackground": true,
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated"
-      },
       "problemMatcher": {
         "pattern": {
-          "regexp": "^$",
+          "regexp": "^([^\\s].*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
           "file": 1,
-          "location": 2,
-          "message": 3
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5
         },
         "background": {
           "activeOnStart": true,
-          "beginsPattern": "Will watch for changes",
-          "endsPattern": "Application startup complete"
+          "beginsPattern": ".*Started reloader process.*",
+          "endsPattern": ".*Application startup complete.*"
         }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": false
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": false
       }
+    },
+    {
+      "label": "cli: Run Scraper",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": [
+        "-m",
+        "price_monitor.cli.main",
+        "--start",
+        "${input:startDate}",
+        "--end",
+        "${input:endDate}",
+        "--guests",
+        "${input:guests}",
+        "--select",
+        "${input:selector}"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    // ============================================
+    // Testing Tasks
+    // ============================================
+    {
+      "label": "test: All",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["-m", "pytest", "tests/", "-v"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "test: Unit",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["-m", "pytest", "tests/unit/", "-v"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "group": "test"
+    },
+    {
+      "label": "test: Integration",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["-m", "pytest", "tests/integration/", "-v"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "group": "test"
+    },
+    {
+      "label": "test: Coverage",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": [
+        "-m",
+        "pytest",
+        "tests/",
+        "--cov=price_monitor",
+        "--cov=webapp",
+        "--cov-report=term-missing",
+        "--cov-report=html"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "group": "test"
+    },
+    {
+      "label": "test: Watch",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["-m", "pytest", "tests/", "-v", "-f"],
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    // ============================================
+    // Code Quality Tasks
+    // ============================================
+    {
+      "label": "lint: flake8",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["-m", "flake8", "price_monitor", "webapp", "tests"],
+      "problemMatcher": {
+        "owner": "python",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "pattern": {
+          "regexp": "^(.+):(\\d+):(\\d+):\\s+(E\\d+|W\\d+|F\\d+)\\s+(.+)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "code": 4,
+          "message": 5
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "group": "build"
+    },
+    {
+      "label": "lint: mypy",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": [
+        "-m",
+        "mypy",
+        "price_monitor",
+        "webapp",
+        "--ignore-missing-imports"
+      ],
+      "problemMatcher": {
+        "owner": "python",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "pattern": {
+          "regexp": "^(.+):(\\d+):\\s+(error|warning|note):\\s+(.+)$",
+          "file": 1,
+          "line": 2,
+          "severity": 3,
+          "message": 4
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "group": "build"
+    },
+    {
+      "label": "format: black",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["-m", "black", "price_monitor", "webapp", "tests", "scripts"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "format: isort",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["-m", "isort", "price_monitor", "webapp", "tests", "scripts"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "format: All",
+      "dependsOn": ["format: isort", "format: black"],
+      "problemMatcher": []
+    },
+    {
+      "label": "check: All",
+      "dependsOn": ["lint: flake8", "lint: mypy"],
+      "problemMatcher": []
+    },
+    // ============================================
+    // Setup & Maintenance Tasks
+    // ============================================
+    {
+      "label": "setup: Install Dependencies",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["-m", "pip", "install", "-r", "requirements.txt"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "setup: Install Dev Dependencies",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["-m", "pip", "install", "-r", "requirements-dev.txt"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "setup: Create Virtual Environment",
+      "type": "shell",
+      "command": "python3",
+      "args": ["-m", "venv", ".venv"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "db: Reset Database",
+      "type": "shell",
+      "command": "rm -f price_monitor.db && ${workspaceFolder}/.venv/bin/python -c 'from webapp.database import init_db; init_db(); print(\"✓ Database reset\")'",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "clean: All",
+      "type": "shell",
+      "command": "find . -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null; find . -type f -name '*.pyc' -delete; rm -rf .pytest_cache htmlcov .coverage; echo '✓ Cleaned'",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    }
+  ],
+  "inputs": [
+    {
+      "id": "startDate",
+      "type": "promptString",
+      "description": "Start date (YYYY-MM-DD)",
+      "default": "2025-12-01"
+    },
+    {
+      "id": "endDate",
+      "type": "promptString",
+      "description": "End date (YYYY-MM-DD)",
+      "default": "2025-12-15"
+    },
+    {
+      "id": "guests",
+      "type": "promptString",
+      "description": "Number of guests",
+      "default": "2"
+    },
+    {
+      "id": "selector",
+      "type": "promptString",
+      "description": "Listing selector (name fragment or index)",
+      "default": "Viento"
     }
   ]
 }
